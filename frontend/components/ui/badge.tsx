@@ -1,42 +1,46 @@
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/lib/types";
 
-const statusConfig: Record<
-  JobStatus,
-  { label: string; className: string }
-> = {
+const statusConfig: Record<JobStatus, { label: string; dot: string; style: React.CSSProperties }> = {
   open: {
     label: "Open",
-    className: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+    dot: "#38bdf8",
+    style: { background: "rgba(56,189,248,0.10)", border: "1px solid rgba(56,189,248,0.25)", color: "#7dd3fc" },
   },
   active: {
-    label: "Active",
-    className: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+    label: "In Progress",
+    dot: "#f59e0b",
+    style: { background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.25)", color: "#fcd34d" },
   },
   delivered: {
     label: "Delivered",
-    className: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+    dot: "#fb923c",
+    style: { background: "rgba(251,146,60,0.10)", border: "1px solid rgba(251,146,60,0.25)", color: "#fdba74" },
   },
   completed: {
-    label: "✅ Completed",
-    className: "bg-green-500/15 text-green-400 border-green-500/30",
+    label: "Completed",
+    dot: "#22c55e",
+    style: { background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.25)", color: "#86efac" },
   },
   disputed: {
-    label: "⚠️ Disputed",
-    className: "bg-red-500/15 text-red-400 border-red-500/30",
+    label: "Disputed",
+    dot: "#ef4444",
+    style: { background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" },
   },
 };
 
 export function StatusBadge({ status }: { status: JobStatus }) {
-  const config = statusConfig[status] ?? statusConfig.open;
+  const cfg = statusConfig[status] ?? statusConfig.open;
   return (
     <span
-      className={cn(
-        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-        config.className
-      )}
+      className="pill flex-shrink-0"
+      style={cfg.style}
     >
-      {config.label}
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ background: cfg.dot, boxShadow: `0 0 6px ${cfg.dot}` }}
+      />
+      {cfg.label}
     </span>
   );
 }
@@ -44,16 +48,21 @@ export function StatusBadge({ status }: { status: JobStatus }) {
 export function Badge({
   children,
   className,
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
     <span
-      className={cn(
-        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-white/10 bg-white/5 text-gray-300",
-        className
-      )}
+      className={cn("pill", className)}
+      style={{
+        background: "var(--surface-raised)",
+        border: "1px solid var(--border-mid)",
+        color: "var(--text-secondary)",
+        ...style,
+      }}
     >
       {children}
     </span>

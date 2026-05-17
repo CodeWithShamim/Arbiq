@@ -4,476 +4,461 @@ import { use, useState, useEffect, FormEvent } from "react";
 import { Navbar } from "@/components/Navbar";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { StatusBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  useGetJob,
-  useTakeJob,
-  useSubmitDelivery,
-  useAutoEvaluate,
-  useRelease,
+  useGetJob, useTakeJob, useSubmitDelivery, useAutoEvaluate, useRelease,
 } from "@/hooks/useArbiqContract";
-import { useAccount, useConnect } from "wagmi";
-import { injected } from "@wagmi/connectors";
+import { useAccount } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { truncateAddress, formatBudget, formatDeadline } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Loader2,
-  ExternalLink,
-  Calendar,
-  Wallet,
-  User,
-  Hash,
-  Brain,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
+  Loader2, ExternalLink, Calendar, Wallet, User, Hash,
+  Brain, CheckCircle2, AlertCircle, Clock, ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 
-export default function JobDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const jobId = parseInt(id, 10);
 
   const { data: job, isLoading, refetch } = useGetJob(jobId);
   const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
+  const { openConnectModal } = useConnectModal();
 
-  // Delivery form state
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [evidenceNote, setEvidenceNote] = useState("");
 
-  const { takeJob, txState: takeState, isLoading: takingJob } = useTakeJob();
-  const { submitDelivery, txState: deliverState, isLoading: submitting } =
-    useSubmitDelivery();
-  const {
-    autoEvaluate,
-    txState: evalState,
-    isLoading: evaluating,
-  } = useAutoEvaluate();
-  const { release, txState: releaseState, isLoading: releasing } = useRelease();
+  const { takeJob,        txState: takeState,    isLoading: takingJob   } = useTakeJob();
+  const { submitDelivery, txState: deliverState, isLoading: submitting  } = useSubmitDelivery();
+  const { autoEvaluate,   txState: evalState,    isLoading: evaluating  } = useAutoEvaluate();
+  const { release,        txState: releaseState, isLoading: releasing   } = useRelease();
 
-  // Refetch after any finalized tx
   useEffect(() => {
     const states = [takeState, deliverState, evalState, releaseState];
-    const anyFinalized = states.some((s) => s.status === "finalized");
-    if (anyFinalized) {
-      setTimeout(() => refetch(), 3000);
-    }
-    states.forEach((s) => {
-      if (s.status === "error" && s.error) toast.error(s.error);
-    });
+    if (states.some((s) => s.status === "finalized")) setTimeout(() => refetch(), 3000);
+    states.forEach((s) => { if (s.status === "error" && s.error) toast.error(s.error); });
   }, [takeState, deliverState, evalState, releaseState, refetch]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f]">
-        <Navbar />
-        <main className="pt-24 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
-        </main>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
+      <Navbar />
+      <main className="pt-32 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative w-12 h-12">
+            <div className="orbit-dot" />
+            <div className="orbit-dot" />
+            <div className="orbit-dot" />
+          </div>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading job…</p>
+        </div>
+      </main>
+    </div>
+  );
 
-  if (!job) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f] text-white">
-        <Navbar />
-        <main className="pt-24 text-center">
-          <p className="text-gray-400">Job #{jobId} not found.</p>
-        </main>
-      </div>
-    );
-  }
+  if (!job) return (
+    <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
+      <Navbar />
+      <main className="pt-32 text-center">
+        <p style={{ color: "var(--text-muted)" }}>Job #{jobId} not found.</p>
+      </main>
+    </div>
+  );
 
   const isClient = address?.toLowerCase() === job.client.toLowerCase();
-  const isFreelancer =
-    job.freelancer && address?.toLowerCase() === job.freelancer.toLowerCase();
-
-  const handleTake = () => takeJob(jobId);
+  const isFreelancer = job.freelancer && address?.toLowerCase() === job.freelancer.toLowerCase();
 
   const handleDeliver = (e: FormEvent) => {
     e.preventDefault();
-    if (!evidenceUrl.trim()) {
-      toast.error("Evidence URL is required");
-      return;
-    }
+    if (!evidenceUrl.trim()) { toast.error("Evidence URL is required"); return; }
     submitDelivery(jobId, evidenceUrl, evidenceNote);
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
       <Navbar />
 
-      <main className="pt-24 pb-16 px-4 md:px-8">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="animate-fade-in">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <h1 className="text-3xl font-bold leading-tight">{job.title}</h1>
-              <StatusBadge status={job.status} />
-            </div>
-            <StatusTimeline status={job.status} />
+      {/* Page header */}
+      <div
+        className="pt-24 pb-8 px-4 md:px-8 relative overflow-hidden"
+        style={{ borderBottom: "1px solid var(--border-page)" }}
+      >
+        <div className="orb orb-violet absolute w-96 h-96 -top-20 -right-20 opacity-20" />
+        <div className="max-w-3xl mx-auto relative z-10">
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-1.5 text-xs mb-5 transition-colors"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to jobs
+          </Link>
+
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <h1 className="headline leading-tight flex-1" style={{ color: "var(--text-primary)" }}>{job.title}</h1>
+            <StatusBadge status={job.status} />
           </div>
 
-          {/* Meta info */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="space-y-1">
-                  <p className="text-gray-500 text-xs uppercase tracking-wide">Budget</p>
-                  <p className="text-purple-300 font-mono font-bold">
-                    {formatBudget(job.budget)}
+          <StatusTimeline status={job.status} />
+        </div>
+      </div>
+
+      <main className="px-4 md:px-8 py-8">
+        <div className="max-w-3xl mx-auto space-y-4">
+
+          {/* Meta strip */}
+          <div
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 rounded-2xl"
+            style={{
+              background: "var(--surface-card)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            {[
+              { label: "Budget", value: formatBudget(job.budget), mono: true, color: "#a78bfa" },
+              { label: "Deadline", value: formatDeadline(job.deadline), icon: <Calendar className="w-3.5 h-3.5" /> },
+              { label: "Client", value: truncateAddress(job.client), mono: true, icon: <User className="w-3.5 h-3.5" /> },
+              job.freelancer
+                ? { label: "Freelancer", value: truncateAddress(job.freelancer), mono: true, icon: <Wallet className="w-3.5 h-3.5" /> }
+                : null,
+            ]
+              .filter(Boolean)
+              .map((item) => (
+                <div key={item!.label} className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-label-dim)" }}>
+                    {item!.label}
+                  </p>
+                  <p
+                    className="text-sm flex items-center gap-1.5 font-medium"
+                    style={{ fontFamily: item!.mono ? "monospace" : undefined, color: item!.color ?? "var(--text-label)" }}
+                  >
+                    {item!.icon}
+                    {item!.value}
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-gray-500 text-xs uppercase tracking-wide">Deadline</p>
-                  <p className="flex items-center gap-1 text-gray-200">
-                    <Calendar className="w-3.5 h-3.5" />
-                    {formatDeadline(job.deadline)}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-500 text-xs uppercase tracking-wide">Client</p>
-                  <p className="flex items-center gap-1 font-mono text-gray-200">
-                    <User className="w-3.5 h-3.5" />
-                    {truncateAddress(job.client)}
-                  </p>
-                </div>
-                {job.freelancer && (
-                  <div className="space-y-1">
-                    <p className="text-gray-500 text-xs uppercase tracking-wide">Freelancer</p>
-                    <p className="flex items-center gap-1 font-mono text-gray-200">
-                      <Wallet className="w-3.5 h-3.5" />
-                      {truncateAddress(job.freelancer)}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+          </div>
 
           {/* Description */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base text-gray-300">Job Description</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-gray-200 whitespace-pre-wrap text-sm leading-relaxed">
-                {job.description}
-              </p>
-            </CardContent>
-          </Card>
+          <Section title="Job Description">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-secondary)" }}>
+              {job.description}
+            </p>
+          </Section>
 
-          {/* ── Status-specific actions ── */}
-
-          {/* OPEN: Take Job */}
+          {/* ── OPEN ── */}
           {job.status === "open" && (
-            <Card className="border-blue-500/20">
-              <CardContent className="pt-6">
-                {isClient ? (
-                  <p className="text-sm text-gray-400 text-center py-2">
-                    Waiting for a freelancer to accept your job.
+            <Section title={isClient ? "Awaiting Freelancer" : "Accept This Job"} accent="#38bdf8">
+              {isClient ? (
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  Your job is live. Waiting for a freelancer to accept.
+                </p>
+              ) : isConnected ? (
+                <div className="space-y-3">
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                    Accept this job and start working. You&apos;ll be the assigned freelancer.
                   </p>
-                ) : isConnected ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-gray-300">
-                      Accept this job to start working. You&apos;ll be the assigned freelancer.
-                    </p>
-                    <Button
-                      onClick={handleTake}
-                      disabled={takingJob}
-                      className="w-full"
-                    >
-                      {takingJob ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Accepting…
-                        </>
-                      ) : (
-                        "Accept & Start Working"
-                      )}
-                    </Button>
-                    {takeState.txHash && (
-                      <TxHashDisplay hash={takeState.txHash} status={takeState.status} />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm text-gray-400">
-                      Connect your wallet to take this job
-                    </p>
-                    <Button
-                      size="sm"
-                      onClick={() => connect({ connector: injected() })}
-                    >
-                      Connect Wallet
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  <ActionButton
+                    onClick={() => takeJob(jobId)}
+                    loading={takingJob}
+                    label="Accept & Start Working"
+                    loadingLabel="Accepting…"
+                  />
+                  <TxRow hash={takeState.txHash} status={takeState.status} />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>Connect your wallet to take this job</p>
+                  <button
+                    onClick={() => openConnectModal?.()}
+                    className="btn-primary px-4 py-2 rounded-lg text-sm text-white font-semibold"
+                  >
+                    Connect Wallet
+                  </button>
+                </div>
+              )}
+            </Section>
           )}
 
-          {/* ACTIVE: Submit Delivery (freelancer only) */}
+          {/* ── ACTIVE + freelancer ── */}
           {job.status === "active" && isFreelancer && (
-            <Card className="border-yellow-500/20">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ExternalLink className="w-5 h-5 text-yellow-400" />
-                  Submit Your Delivery
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <form onSubmit={handleDeliver} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300">
-                      Evidence URL
-                      <span className="text-gray-500 font-normal ml-2 text-xs">
-                        GitHub, live site, Figma, etc.
-                      </span>
-                    </label>
-                    <Input
-                      type="url"
-                      placeholder="https://github.com/you/project"
-                      value={evidenceUrl}
-                      onChange={(e) => setEvidenceUrl(e.target.value)}
-                      disabled={submitting}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300">
-                      Delivery Note
-                    </label>
-                    <Textarea
-                      rows={3}
-                      placeholder="Describe what you built and how it fulfills the job requirements…"
-                      value={evidenceNote}
-                      onChange={(e) => setEvidenceNote(e.target.value)}
-                      disabled={submitting}
-                    />
-                  </div>
-                  <Button type="submit" disabled={submitting} className="w-full">
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Submitting…
-                      </>
-                    ) : (
-                      "Submit Delivery"
-                    )}
-                  </Button>
-                  {deliverState.txHash && (
-                    <TxHashDisplay
-                      hash={deliverState.txHash}
-                      status={deliverState.status}
-                    />
-                  )}
-                </form>
-              </CardContent>
-            </Card>
+            <Section title="Submit Your Delivery" accent="#f59e0b">
+              <form onSubmit={handleDeliver} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold" style={{ color: "var(--text-label)" }}>
+                    Evidence URL
+                    <span className="text-xs font-normal ml-2" style={{ color: "var(--text-muted)" }}>
+                      GitHub, live site, Figma, Loom, etc.
+                    </span>
+                  </label>
+                  <Input
+                    type="url"
+                    placeholder="https://github.com/you/project"
+                    value={evidenceUrl}
+                    onChange={(e) => setEvidenceUrl(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold" style={{ color: "var(--text-label)" }}>Delivery Note</label>
+                  <Textarea
+                    rows={4}
+                    placeholder="Explain what you built and how it satisfies every requirement in the job description…"
+                    value={evidenceNote}
+                    onChange={(e) => setEvidenceNote(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <ActionButton type="submit" loading={submitting} label="Submit Delivery" loadingLabel="Submitting…" />
+                <TxRow hash={deliverState.txHash} status={deliverState.status} />
+              </form>
+            </Section>
           )}
 
           {job.status === "active" && !isFreelancer && !isClient && (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <p className="text-sm text-gray-400">
-                  This job is currently being worked on.
-                </p>
-              </CardContent>
-            </Card>
+            <Section title="In Progress">
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>This job is currently being worked on.</p>
+            </Section>
           )}
 
-          {/* DELIVERED: Evidence + actions */}
+          {/* ── DELIVERED ── */}
           {job.status === "delivered" && (
             <>
-              {/* Show evidence */}
-              <Card className="border-orange-500/20">
-                <CardHeader>
-                  <CardTitle className="text-base text-orange-300">
-                    Freelancer Submission
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <ExternalLink className="w-4 h-4 text-orange-400 flex-shrink-0" />
-                    <a
-                      href={job.evidence_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-orange-300 underline text-sm break-all hover:text-orange-200 transition-colors"
-                    >
-                      {job.evidence_url}
-                    </a>
-                  </div>
-                  {job.evidence_note && (
-                    <p className="text-sm text-gray-300 whitespace-pre-wrap border-t border-white/5 pt-3">
-                      {job.evidence_note}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <Section title="Freelancer Submission" accent="#fb923c">
+                <a
+                  href={job.evidence_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm break-all transition-colors mb-3"
+                  style={{ color: "#fdba74" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#fbbf24"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#fdba74"; }}
+                >
+                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                  {job.evidence_url}
+                </a>
+                {job.evidence_note && (
+                  <p
+                    className="text-sm whitespace-pre-wrap leading-relaxed pt-3"
+                    style={{ color: "var(--text-secondary)", borderTop: "1px solid var(--border-divider)" }}
+                  >
+                    {job.evidence_note}
+                  </p>
+                )}
+              </Section>
 
-              {/* Client actions */}
               {isClient && (
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
+                <Section title="Review & Decide">
+                  <div className="space-y-4">
                     {/* AI evaluate */}
-                    <div className="space-y-2">
-                      <Button
-                        onClick={() => autoEvaluate(jobId)}
-                        disabled={evaluating}
-                        className="w-full"
-                      >
-                        {evaluating ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            AI Validators reviewing…
-                          </>
-                        ) : (
-                          <>
-                            <Brain className="w-4 h-4" />
-                            Trigger AI Evaluation
-                          </>
-                        )}
-                      </Button>
-                      {evaluating && (
-                        <p className="text-xs text-purple-300 text-center animate-pulse">
-                          Waiting for AI consensus across validator nodes…
+                    <div
+                      className="p-4 rounded-xl space-y-3"
+                      style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}
+                    >
+                      <div>
+                        <p className="text-sm font-semibold mb-1 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                          <Brain className="w-4 h-4" style={{ color: "#a78bfa" }} />
+                          AI Evaluation
                         </p>
+                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          GenLayer&apos;s validator network will read the job spec and the evidence URL, then reach consensus.
+                        </p>
+                      </div>
+                      <ActionButton
+                        onClick={() => autoEvaluate(jobId)}
+                        loading={evaluating}
+                        label="Trigger AI Evaluation"
+                        loadingLabel="AI Validators reviewing…"
+                        icon={<Brain className="w-4 h-4" />}
+                      />
+                      {evaluating && (
+                        <div className="flex items-center gap-3 text-xs" style={{ color: "#a78bfa" }}>
+                          <div className="relative w-6 h-6 flex-shrink-0">
+                            <div className="orbit-dot" />
+                            <div className="orbit-dot" />
+                            <div className="orbit-dot" />
+                          </div>
+                          Waiting for AI consensus across validator nodes…
+                        </div>
                       )}
-                      {evalState.txHash && (
-                        <TxHashDisplay
-                          hash={evalState.txHash}
-                          status={evalState.status}
-                        />
-                      )}
+                      <TxRow hash={evalState.txHash} status={evalState.status} />
                     </div>
 
+                    {/* Divider */}
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-px bg-white/5" />
-                      <span className="text-xs text-gray-500">or</span>
-                      <div className="flex-1 h-px bg-white/5" />
+                      <div className="flex-1 h-px" style={{ background: "var(--border-divider)" }} />
+                      <span className="text-xs" style={{ color: "var(--text-label-dim)" }}>or</span>
+                      <div className="flex-1 h-px" style={{ background: "var(--border-divider)" }} />
                     </div>
 
                     {/* Manual release */}
-                    <Button
-                      variant="success"
-                      onClick={() => release(jobId)}
-                      disabled={releasing}
-                      className="w-full"
+                    <div
+                      className="p-4 rounded-xl space-y-3"
+                      style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.15)" }}
                     >
-                      {releasing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Releasing…
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          Approve & Pay Manually
-                        </>
-                      )}
-                    </Button>
-                    {releaseState.txHash && (
-                      <TxHashDisplay
-                        hash={releaseState.txHash}
-                        status={releaseState.status}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
+                      <p className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                        <CheckCircle2 className="w-4 h-4 text-green-400" />
+                        Manual Approval
+                      </p>
+                      <button
+                        onClick={() => release(jobId)}
+                        disabled={releasing}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                        style={{
+                          background: "rgba(34,197,94,0.12)",
+                          border: "1px solid rgba(34,197,94,0.25)",
+                          color: "#86efac",
+                        }}
+                      >
+                        {releasing ? <><Loader2 className="w-4 h-4 animate-spin" /> Releasing…</> : <><CheckCircle2 className="w-4 h-4" /> Approve & Pay Manually</>}
+                      </button>
+                      <TxRow hash={releaseState.txHash} status={releaseState.status} />
+                    </div>
+                  </div>
+                </Section>
               )}
 
-              {/* Freelancer view while waiting */}
               {isFreelancer && (
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <Clock className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-300">
-                      Delivery submitted. Waiting for the client to approve or trigger AI evaluation.
-                    </p>
-                  </CardContent>
-                </Card>
+                <Section title="Waiting for Client">
+                  <div className="flex items-center gap-3 text-sm" style={{ color: "var(--text-secondary)" }}>
+                    <Clock className="w-5 h-5 text-orange-400 flex-shrink-0" />
+                    Delivery submitted. The client can approve or trigger AI evaluation.
+                  </div>
+                </Section>
               )}
             </>
           )}
 
-          {/* COMPLETED */}
+          {/* ── COMPLETED ── */}
           {job.status === "completed" && (
-            <Card className="border-green-500/20">
-              <CardContent className="pt-6 space-y-3">
-                <div className="flex items-center gap-2 text-green-400 font-semibold">
-                  <CheckCircle2 className="w-5 h-5" />
-                  AI Approved — Funds Released
-                </div>
-                {job.ai_reasoning && (
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap border-t border-white/5 pt-3">
-                    <span className="text-gray-500 text-xs uppercase tracking-wide block mb-1">
-                      AI Reasoning
-                    </span>
-                    {job.ai_reasoning}
+            <div
+              className="p-6 rounded-2xl space-y-3 anim-scale-in"
+              style={{
+                background: "linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.03) 100%)",
+                border: "1px solid rgba(34,197,94,0.2)",
+                boxShadow: "0 0 40px rgba(34,197,94,0.08)",
+              }}
+            >
+              <div className="flex items-center gap-2 font-bold text-green-300">
+                <CheckCircle2 className="w-5 h-5" />
+                AI Approved — Funds Released
+              </div>
+              {job.ai_reasoning && (
+                <div className="pt-3" style={{ borderTop: "1px solid rgba(34,197,94,0.12)" }}>
+                  <p className="text-[10px] uppercase font-bold tracking-widest mb-2" style={{ color: "rgba(34,197,94,0.5)" }}>
+                    AI Reasoning
                   </p>
-                )}
-              </CardContent>
-            </Card>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{job.ai_reasoning}</p>
+                </div>
+              )}
+            </div>
           )}
 
-          {/* DISPUTED */}
+          {/* ── DISPUTED ── */}
           {job.status === "disputed" && (
-            <Card className="border-red-500/20">
-              <CardContent className="pt-6 space-y-3">
-                <div className="flex items-center gap-2 text-red-400 font-semibold">
-                  <AlertCircle className="w-5 h-5" />
-                  AI Rejected — Disputed
-                </div>
-                {job.ai_reasoning && (
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap border-t border-white/5 pt-3">
-                    <span className="text-gray-500 text-xs uppercase tracking-wide block mb-1">
-                      AI Reasoning
-                    </span>
-                    {job.ai_reasoning}
+            <div
+              className="p-6 rounded-2xl space-y-3 anim-scale-in"
+              style={{
+                background: "linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(239,68,68,0.03) 100%)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                boxShadow: "0 0 40px rgba(239,68,68,0.08)",
+              }}
+            >
+              <div className="flex items-center gap-2 font-bold text-red-300">
+                <AlertCircle className="w-5 h-5" />
+                AI Rejected — Disputed
+              </div>
+              {job.ai_reasoning && (
+                <div className="pt-3" style={{ borderTop: "1px solid rgba(239,68,68,0.12)" }}>
+                  <p className="text-[10px] uppercase font-bold tracking-widest mb-2" style={{ color: "rgba(239,68,68,0.5)" }}>
+                    AI Reasoning
                   </p>
-                )}
-                <div className="pt-2">
-                  <Button variant="outline" className="w-full opacity-50 cursor-not-allowed" disabled>
-                    Appeal (Coming Soon)
-                  </Button>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{job.ai_reasoning}</p>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+              <button
+                disabled
+                className="w-full py-2.5 rounded-xl text-sm font-semibold mt-2 opacity-40 cursor-not-allowed"
+                style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }}
+              >
+                Appeal — Coming Soon
+              </button>
+            </div>
           )}
+
         </div>
       </main>
     </div>
   );
 }
 
-function TxHashDisplay({
-  hash,
-  status,
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function Section({ title, children, accent }: { title: string; children: React.ReactNode; accent?: string }) {
+  return (
+    <div
+      className="p-6 rounded-2xl space-y-4"
+      style={{
+        background: "var(--surface-card)",
+        border: `1px solid ${accent ? `${accent}22` : "var(--border-subtle)"}`,
+      }}
+    >
+      <h2 className="text-sm font-bold" style={{ color: accent ?? "var(--text-label)" }}>
+        {title}
+      </h2>
+      {children}
+    </div>
+  );
+}
+
+function ActionButton({
+  onClick,
+  loading,
+  label,
+  loadingLabel,
+  icon,
+  type = "button",
 }: {
-  hash: string;
-  status: string;
+  onClick?: () => void;
+  loading: boolean;
+  label: string;
+  loadingLabel: string;
+  icon?: React.ReactNode;
+  type?: "button" | "submit";
 }) {
   return (
-    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 border border-white/10 text-xs">
-      <Hash className="w-3 h-3 text-gray-500 flex-shrink-0" />
-      <code className="text-purple-400 font-mono truncate flex-1">{hash}</code>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={loading}
+      className="btn-primary w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm" style={{ color: "white" }}
+    >
+      {loading ? (
+        <><Loader2 className="w-4 h-4 animate-spin" />{loadingLabel}</>
+      ) : (
+        <>{icon}{label}</>
+      )}
+    </button>
+  );
+}
+
+function TxRow({ hash, status }: { hash: string | null; status: string }) {
+  if (!hash) return null;
+  return (
+    <div
+      className="flex items-center gap-2 p-2.5 rounded-lg text-xs"
+      style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)" }}
+    >
+      <Hash className="w-3 h-3 flex-shrink-0" style={{ color: "var(--text-muted)" }} />
+      <code className="font-mono truncate flex-1" style={{ color: "#a78bfa" }}>{hash}</code>
       <span
-        className={`text-[10px] uppercase font-semibold flex-shrink-0 ${
-          status === "finalized"
-            ? "text-green-400"
-            : status === "error"
-            ? "text-red-400"
-            : "text-yellow-400"
-        }`}
+        className="text-[10px] font-bold uppercase flex-shrink-0"
+        style={{
+          color: status === "finalized" ? "#86efac" : status === "error" ? "#fca5a5" : "#fcd34d",
+        }}
       >
         {status}
       </span>

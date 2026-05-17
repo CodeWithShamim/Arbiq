@@ -1,20 +1,15 @@
-import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/lib/types";
-import { CheckCircle2, Circle } from "lucide-react";
+import { Check } from "lucide-react";
 
-const STEPS: { status: JobStatus; label: string }[] = [
-  { status: "open", label: "Open" },
-  { status: "active", label: "Active" },
-  { status: "delivered", label: "Delivered" },
-  { status: "completed", label: "Evaluated" },
+const STEPS = [
+  { label: "Open", short: "Open" },
+  { label: "Active", short: "Active" },
+  { label: "Delivered", short: "Delivered" },
+  { label: "Evaluated", short: "Done" },
 ];
 
 const ORDER: Record<JobStatus, number> = {
-  open: 0,
-  active: 1,
-  delivered: 2,
-  completed: 3,
-  disputed: 3,
+  open: 0, active: 1, delivered: 2, completed: 3, disputed: 3,
 };
 
 export function StatusTimeline({ status }: { status: JobStatus }) {
@@ -22,56 +17,73 @@ export function StatusTimeline({ status }: { status: JobStatus }) {
   const isDisputed = status === "disputed";
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center w-full">
       {STEPS.map((step, idx) => {
         const done = current > idx;
         const active = current === idx && !isDisputed;
         const disputedHere = isDisputed && idx === 3;
+        const isLast = idx === STEPS.length - 1;
 
         return (
-          <div key={step.status} className="flex items-center gap-2">
-            <div className="flex flex-col items-center gap-1">
+          <div key={step.label} className="flex items-center flex-1 last:flex-none">
+            {/* Node */}
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
               <div
-                className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500"
+                style={
                   done
-                    ? "bg-purple-600 text-white"
+                    ? { background: "linear-gradient(135deg,#7c3aed,#a78bfa)", boxShadow: "0 0 16px rgba(124,58,237,0.5)" }
                     : active
-                    ? "bg-purple-600/30 border-2 border-purple-500 text-purple-400"
+                    ? { background: "rgba(124,58,237,0.2)", border: "2px solid #7c3aed", boxShadow: "0 0 0 0 rgba(124,58,237,0.4)" }
                     : disputedHere
-                    ? "bg-red-500/30 border-2 border-red-500 text-red-400"
-                    : "bg-white/5 border border-white/10 text-gray-600"
-                )}
+                    ? { background: "rgba(239,68,68,0.15)", border: "2px solid #ef4444" }
+                    : { background: "var(--surface-raised)", border: "1px solid var(--border-mid)" }
+                }
               >
                 {done ? (
-                  <CheckCircle2 className="w-4 h-4" />
+                  <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                ) : disputedHere ? (
+                  <span className="text-red-400 text-xs font-bold">!</span>
                 ) : (
-                  <Circle className="w-3 h-3" />
+                  <span
+                    className="text-xs font-bold"
+                    style={{ color: active ? "#a78bfa" : "var(--text-muted)" }}
+                  >
+                    {idx + 1}
+                  </span>
                 )}
               </div>
               <span
-                className={cn(
-                  "text-[10px] font-medium whitespace-nowrap",
-                  done
-                    ? "text-purple-400"
+                className="text-[10px] font-semibold whitespace-nowrap"
+                style={{
+                  color: done
+                    ? "#a78bfa"
                     : active
-                    ? "text-white"
+                    ? "var(--text-primary)"
                     : disputedHere
-                    ? "text-red-400"
-                    : "text-gray-600"
-                )}
+                    ? "#fca5a5"
+                    : "var(--text-muted)",
+                }}
               >
-                {disputedHere ? "Disputed" : step.label}
+                {disputedHere ? "Disputed" : step.short}
               </span>
             </div>
 
-            {idx < STEPS.length - 1 && (
+            {/* Connector */}
+            {!isLast && (
               <div
-                className={cn(
-                  "h-px flex-1 min-w-[24px] mb-4",
-                  done ? "bg-purple-600/60" : "bg-white/10"
-                )}
-              />
+                className="flex-1 h-[2px] mx-2 mb-5 rounded-full overflow-hidden"
+                style={{ background: "var(--border-mid)" }}
+              >
+                <div
+                  className="h-full rounded-full progress-fill"
+                  style={{
+                    background: "linear-gradient(90deg,#7c3aed,#a78bfa)",
+                    width: done ? "100%" : "0%",
+                    transition: "width 0.8s cubic-bezier(0.16,1,0.3,1)",
+                  }}
+                />
+              </div>
             )}
           </div>
         );
