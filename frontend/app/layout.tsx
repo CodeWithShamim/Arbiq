@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Providers } from "./providers";
+import "@rainbow-me/rainbowkit/styles.css";
+import { Providers, WrongNetworkBanner } from "./providers";
 
 export const metadata: Metadata = {
   // fonts loaded via <link> in head below
@@ -21,7 +22,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <WrongNetworkBanner />
+          {children}
+        </Providers>
       </body>
     </html>
   );

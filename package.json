@@ -6,7 +6,8 @@
   "private": true,
   "workspaces": ["frontend"],
   "scripts": {
-    "deploy": "genlayer deploy",
+    "deploy": "genlayer deploy --contract contracts/arbiq.py",
+    "deploy:bradbury": "genlayer deploy --contract contracts/arbiq.py --rpc https://rpc-bradbury.genlayer.com",
     "test": ".venv/bin/pytest test/test_arbiq.py -v",
     "test:network": ".venv/bin/gltest",
     "dev": "cd frontend && npm run dev",

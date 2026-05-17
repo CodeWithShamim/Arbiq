@@ -45,7 +45,6 @@ class Arbiq(gl.Contract):
             raise gl.vm.UserError("Description must be at least 20 characters")
         if not deadline:
             raise gl.vm.UserError("Deadline is required")
-
         budget = gl.message.value
         if budget == u256(0):
             raise gl.vm.UserError("Must send GEN to escrow as job budget")
@@ -66,52 +65,41 @@ class Arbiq(gl.Contract):
             "evidence_note": "",
             "ai_reasoning": "",
         }
-
         self._save_job(job_id, job)
 
     @gl.public.write
     def take_job(self, job_id: int) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-
         if job["status"] != STATUS_OPEN:
             raise gl.vm.UserError("Job is not open")
-
         caller = gl.message.sender_address.as_hex
         if caller == job["client"]:
             raise gl.vm.UserError("Client cannot take their own job")
-
         job["freelancer"] = caller
         job["status"] = STATUS_ACTIVE
-
         self._save_job(jid, job)
 
     @gl.public.write
     def submit_delivery(self, job_id: int, evidence_url: str, evidence_note: str) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-
         if job["status"] != STATUS_ACTIVE:
             raise gl.vm.UserError("Job is not active")
-
         caller = gl.message.sender_address.as_hex
         if caller != job["freelancer"]:
             raise gl.vm.UserError("Only the assigned freelancer can submit delivery")
-
         if not evidence_url.strip():
             raise gl.vm.UserError("Evidence URL is required")
-
         job["evidence_url"] = evidence_url.strip()
         job["evidence_note"] = evidence_note.strip() if evidence_note else ""
         job["status"] = STATUS_DELIVERED
-
         self._save_job(jid, job)
 
     @gl.public.write
     def auto_evaluate(self, job_id: int) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-
         if job["status"] != STATUS_DELIVERED:
             raise gl.vm.UserError("Job has not been delivered yet")
 
@@ -135,14 +123,20 @@ FREELANCER SUBMISSION:
 - Freelancer note: {evidence_note or "(none provided)"}
 
 Determine whether the freelancer's submission satisfactorily fulfills the job requirements.
-
 Criteria:
 1. Does the evidence URL point to something relevant to the job?
 2. Does the freelancer note describe completing the required work?
 3. Is there a reasonable basis to believe the work was done?
 
-Return ONLY valid JSON, no markdown, no extra text:
-{{"approved": true, "reasoning": "Your 1-3 sentence reasoning here."}}"""
+Respond using ONLY the following JSON format, nothing else:
+{{
+"approved": bool,
+"reasoning": str
+}}
+It is mandatory that you respond only using the JSON format above,
+nothing else. Don't include any other words or characters,
+your output must be only JSON without any formatting prefix or suffix.
+This result should be perfectly parseable by a JSON parser without errors."""
 
             result = gl.nondet.exec_prompt(prompt)
             return result.replace("```json", "").replace("```", "")
@@ -176,19 +170,14 @@ Return ONLY valid JSON, no markdown, no extra text:
     def release_manually(self, job_id: int) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-
         if job["status"] != STATUS_DELIVERED:
             raise gl.vm.UserError("Job has not been delivered yet")
-
         caller = gl.message.sender_address.as_hex
         if caller != job["client"]:
             raise gl.vm.UserError("Only the client can manually release payment")
-
         _Recipient(Address(job["freelancer"])).emit_transfer(value=job["budget"])
-
         job["status"] = STATUS_COMPLETED
         job["ai_reasoning"] = "Manually approved by client."
-
         self._save_job(jid, job)
 
     @gl.public.view
