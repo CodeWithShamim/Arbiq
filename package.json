@@ -1,0 +1,14 @@
+{
+  "name": "arbiq-freelance",
+  "version": "1.0.0",
+  "description": "Arbiq — AI-enforced freelance escrow marketplace on GenLayer",
+  "scripts": {
+    "deploy": "genlayer deploy contracts/arbiq.py",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "install:frontend": "cd frontend && npm install"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
