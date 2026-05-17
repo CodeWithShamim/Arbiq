@@ -1,14 +1,20 @@
 {
   "name": "arbiq-freelance",
   "version": "1.0.0",
+  "type": "module",
   "description": "Arbiq — AI-enforced freelance escrow marketplace on GenLayer",
+  "private": true,
+  "workspaces": ["frontend"],
   "scripts": {
-    "deploy": "genlayer deploy contracts/arbiq.py",
+    "deploy": "genlayer deploy",
+    "test": ".venv/bin/pytest test/test_arbiq.py -v",
+    "test:network": ".venv/bin/gltest",
     "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
     "install:frontend": "cd frontend && npm install"
   },
   "devDependencies": {
+    "genlayer-js": "^0.18.3",
     "typescript": "^5.9.3"
   }
 }
