@@ -61,7 +61,7 @@ async function readContract(method: string, args: unknown[] = []): Promise<unkno
   return genLayerClient.readContract({
     address: CONTRACT_ADDRESS,
     functionName: method,
-    args,
+    args: args as never[],
   });
 }
 
