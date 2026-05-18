@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, useWalletClient } from "wagmi";
 import { parseEther } from "viem";
 import type { CalldataEncodable, TransactionHash } from "genlayer-js/types";
-import { TransactionStatus } from "genlayer-js/types";
+import { isDecidedState, transactionsStatusNumberToName } from "genlayer-js/types";
 import { genLayerClient, createClient, testnetBradbury, CONTRACT_ADDRESS } from "@/lib/genlayer/client";
 import type { Job } from "@/lib/types";
 
@@ -131,40 +131,51 @@ function useContractWrite() {
   }, []);
 
   const pollStatus = useCallback(
-    async (hash: TransactionHash, retries: number) => {
+    async (hash: TransactionHash, maxRetries: number) => {
       setTxState((s) => ({ ...s, status: "finalizing", consensusStatus: "PENDING" }));
-      try {
-        // waitForTransactionReceipt polls gen_getTransaction until status is ACCEPTED.
-        // ACCEPTED means enough validators agreed — the state mutation is committed.
-        const receipt = await genLayerClient.waitForTransactionReceipt({
-          hash,
-          status: TransactionStatus.ACCEPTED,
-          retries,
-          interval: 3_000,
-        });
 
-        // Extract the leader's return value from consensus receipt
-        // consensus_data.leader_receipt is an array of validator receipts; index 0 is leader
-        const leaderResult = (receipt as Record<string, unknown>)?.consensus_data;
-        let returnValue: unknown = null;
-        if (leaderResult && typeof leaderResult === "object") {
-          const lr = (leaderResult as Record<string, unknown>).leader_receipt;
-          if (Array.isArray(lr) && lr.length > 0) {
-            returnValue = (lr[0] as Record<string, unknown>).result ?? null;
+      // Poll getTransaction directly at 1s intervals instead of using the black-box
+      // waitForTransactionReceipt (which sleeps 3s between attempts with no live updates).
+      // This gives us real-time consensusStatus updates AND reaches decided state ~3x faster.
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        await new Promise((r) => setTimeout(r, 1_000));
+        try {
+          const tx = await genLayerClient.getTransaction({ hash });
+          const statusNum = String(tx.status);
+          // transactionsStatusNumberToName maps "5" → "ACCEPTED", "2" → "PROPOSING", etc.
+          const statusName = transactionsStatusNumberToName[statusNum as keyof typeof transactionsStatusNumberToName] ?? "PENDING";
+
+          // Surface the live phase in the UI on every tick
+          setTxState((s) => ({ ...s, consensusStatus: statusName }));
+
+          if (isDecidedState(statusNum)) {
+            const leaderResult = (tx as Record<string, unknown>)?.consensus_data;
+            let returnValue: unknown = null;
+            if (leaderResult && typeof leaderResult === "object") {
+              const lr = (leaderResult as Record<string, unknown>).leader_receipt;
+              if (Array.isArray(lr) && lr.length > 0) {
+                returnValue = (lr[0] as Record<string, unknown>).result ?? null;
+              }
+            }
+            setTxState((s) => ({
+              ...s,
+              status: "finalized",
+              consensusStatus: statusName,
+              returnValue,
+            }));
+            queryClient.invalidateQueries({ queryKey: ["arbiq"] });
+            return;
           }
+        } catch {
+          // getTransaction may 404 briefly after submission — keep polling
         }
-
-        setTxState((s) => ({
-          ...s,
-          status: "finalized",
-          consensusStatus: "ACCEPTED",
-          returnValue,
-        }));
-        queryClient.invalidateQueries({ queryKey: ["arbiq"] });
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Transaction failed";
-        setTxState((s) => ({ ...s, status: "error", error: msg }));
       }
+
+      setTxState((s) => ({
+        ...s,
+        status: "error",
+        error: `Timed out after ${maxRetries}s waiting for consensus`,
+      }));
     },
     [queryClient]
   );
@@ -174,8 +185,8 @@ function useContractWrite() {
       functionName,
       args,
       value,
-      // Higher retries for non-deterministic (AI) calls — they take longer to reach consensus
-      retries = 60,
+      // retries = max seconds to wait (1 poll/sec). 90s for deterministic, 300s for AI.
+      retries = 90,
     }: {
       functionName: string;
       args: CalldataEncodable[];
@@ -327,8 +338,8 @@ export function useAutoEvaluate() {
       send({
         functionName: "auto_evaluate",
         args: [jobId],
-        // AI evaluation takes longer — more validator rounds needed
-        retries: 120,
+        // AI evaluation needs more time for LLM inference across validator nodes
+        retries: 300,
       }),
     [send]
   );
