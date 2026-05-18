@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Shield, Zap, Brain, ArrowRight, CheckCircle } from 'lucide-react';
+import { useGetAllJobs } from '@/hooks/useArbiqContract';
+import { useCountUp } from '@/hooks/useCountUp';
 
 const features = [
   {
@@ -55,6 +57,33 @@ const steps = [
     desc: 'Approved? GEN flows instantly. Disputed? Funds are held for appeal.',
   },
 ];
+
+function LiveStats() {
+  const { data: jobs = [] } = useGetAllJobs();
+  const total     = useCountUp(jobs.length, 800);
+  const open      = useCountUp(jobs.filter((j) => j.status === 'open').length, 900);
+  const completed = useCountUp(jobs.filter((j) => j.status === 'completed').length, 1000);
+
+  return (
+    <div
+      className="flex flex-wrap items-center justify-center gap-8 mt-14 relative z-10 anim-fade-in"
+      style={{ animationDelay: '350ms' }}
+    >
+      {[
+        { value: total,     label: 'Jobs on-chain',  color: '#a78bfa' },
+        { value: open,      label: 'Open now',        color: '#38bdf8' },
+        { value: completed, label: 'Completed',       color: '#22c55e' },
+      ].map(({ value, label, color }) => (
+        <div key={label} className="text-center">
+          <div className="text-3xl font-black tracking-tight tabular-nums" style={{ color }}>
+            {value}
+          </div>
+          <div className="text-xs font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -143,10 +172,10 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Social proof row */}
+        {/* Trust pills */}
         <div
-          className="flex items-center gap-6 mt-12 text-xs relative z-10 anim-fade-in"
-          style={{ color: 'var(--text-muted)', animationDelay: '300ms' }}
+          className="flex flex-wrap items-center justify-center gap-4 mt-10 text-xs relative z-10 anim-fade-in"
+          style={{ color: 'var(--text-muted)', animationDelay: '280ms' }}
         >
           {['Trustless escrow', 'AI-enforced verdicts', 'On-chain transparency'].map((t) => (
             <span key={t} className="flex items-center gap-1.5">
@@ -155,6 +184,9 @@ export default function HomePage() {
             </span>
           ))}
         </div>
+
+        {/* Live chain stats */}
+        <LiveStats />
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────────────────────── */}

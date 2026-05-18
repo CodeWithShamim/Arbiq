@@ -8,6 +8,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { formatBudget } from "@/lib/utils";
 import { Briefcase, Wallet, AlertTriangle, TrendingUp, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useCountUp } from "@/hooks/useCountUp";
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
@@ -73,27 +74,7 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 stagger">
           {stats.map(({ label, value, icon: Icon, accent, glow }) => (
-            <div
-              key={label}
-              className="anim-fade-up p-5 rounded-2xl relative overflow-hidden"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--border-subtle)",
-              }}
-            >
-              <div
-                className="absolute inset-0 pointer-events-none rounded-2xl"
-                style={{ background: `radial-gradient(ellipse at top left, ${glow} 0%, transparent 60%)` }}
-              />
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 relative z-10"
-                style={{ background: `${accent}18`, border: `1px solid ${accent}30` }}
-              >
-                <Icon className="w-4.5 h-4.5" style={{ color: accent }} strokeWidth={1.8} />
-              </div>
-              <p className="text-2xl font-extrabold mb-0.5 relative z-10 tracking-tight" style={{ color: "var(--text-primary)" }}>{value}</p>
-              <p className="text-xs relative z-10" style={{ color: "var(--text-muted)" }}>{label}</p>
-            </div>
+            <AnimatedStatCard key={label} label={label} value={value} Icon={Icon} accent={accent} glow={glow} />
           ))}
         </div>
 
@@ -117,6 +98,47 @@ export default function DashboardPage() {
           />
         </div>
       </main>
+    </div>
+  );
+}
+
+function AnimatedStatCard({
+  label, value, Icon, accent, glow,
+}: {
+  label: string;
+  value: string;
+  Icon: React.ElementType;
+  accent: string;
+  glow: string;
+}) {
+  // Animate if the value is a plain number; leave budget strings as-is
+  const numeric = parseFloat(value.replace(/[^\d.]/g, ""));
+  const isNum   = !isNaN(numeric) && value === String(Math.round(numeric));
+  const counted = useCountUp(isNum ? numeric : 0, 900, isNum);
+  const display = isNum ? String(counted) : value;
+
+  return (
+    <div
+      className="anim-fade-up p-5 rounded-2xl relative overflow-hidden"
+      style={{ background: "var(--glass-bg)", border: "1px solid var(--border-subtle)" }}
+    >
+      <div
+        className="absolute inset-0 pointer-events-none rounded-2xl"
+        style={{ background: `radial-gradient(ellipse at top left, ${glow} 0%, transparent 60%)` }}
+      />
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 relative z-10"
+        style={{ background: `${accent}18`, border: `1px solid ${accent}30` }}
+      >
+        <Icon className="w-4 h-4" style={{ color: accent }} strokeWidth={1.8} />
+      </div>
+      <p
+        className="text-2xl font-extrabold mb-0.5 relative z-10 tracking-tight tabular-nums"
+        style={{ color: "var(--text-primary)" }}
+      >
+        {display}
+      </p>
+      <p className="text-xs relative z-10" style={{ color: "var(--text-muted)" }}>{label}</p>
     </div>
   );
 }

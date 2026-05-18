@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, FormEvent } from "react";
+import { use, useState, useEffect, useCallback, FormEvent } from "react";
 import { Navbar } from "@/components/Navbar";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { StatusBadge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import {
   Loader2, ExternalLink, Calendar, Wallet, User,
   Brain, CheckCircle2, AlertCircle, Clock, ArrowLeft,
+  Copy, Check, Share2,
 } from "lucide-react";
 import { ConsensusTxStatus } from "@/components/ConsensusTxStatus";
 import Link from "next/link";
@@ -100,7 +101,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
           <div className="flex items-start justify-between gap-4 mb-5">
             <h1 className="headline leading-tight flex-1" style={{ color: "var(--text-primary)" }}>{job.title}</h1>
-            <StatusBadge status={job.status} />
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <StatusBadge status={job.status} />
+              <ShareButton />
+            </div>
           </div>
 
           <StatusTimeline status={job.status} />
@@ -118,29 +122,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               border: "1px solid var(--border-subtle)",
             }}
           >
-            {[
-              { label: "Budget", value: formatBudget(job.budget), mono: true, color: "#a78bfa" },
-              { label: "Deadline", value: formatDeadline(job.deadline), icon: <Calendar className="w-3.5 h-3.5" /> },
-              { label: "Client", value: truncateAddress(job.client), mono: true, icon: <User className="w-3.5 h-3.5" /> },
-              job.freelancer
-                ? { label: "Freelancer", value: truncateAddress(job.freelancer), mono: true, icon: <Wallet className="w-3.5 h-3.5" /> }
-                : null,
-            ]
-              .filter(Boolean)
-              .map((item) => (
-                <div key={item!.label} className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-label-dim)" }}>
-                    {item!.label}
-                  </p>
-                  <p
-                    className="text-sm flex items-center gap-1.5 font-medium"
-                    style={{ fontFamily: item!.mono ? "monospace" : undefined, color: item!.color ?? "var(--text-label)" }}
-                  >
-                    {item!.icon}
-                    {item!.value}
-                  </p>
-                </div>
-              ))}
+            <MetaItem label="Budget" value={formatBudget(job.budget)} color="#a78bfa" mono />
+            <MetaItem label="Deadline" value={formatDeadline(job.deadline)} icon={<Calendar className="w-3.5 h-3.5" />} />
+            <MetaItem label="Client" value={truncateAddress(job.client)} fullValue={job.client} mono copyable icon={<User className="w-3.5 h-3.5" />} />
+            {job.freelancer && (
+              <MetaItem label="Freelancer" value={truncateAddress(job.freelancer)} fullValue={job.freelancer} mono copyable icon={<Wallet className="w-3.5 h-3.5" />} />
+            )}
           </div>
 
           {/* Description */}
@@ -404,6 +391,77 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function MetaItem({
+  label, value, fullValue, mono, copyable, icon, color,
+}: {
+  label: string; value: string; fullValue?: string;
+  mono?: boolean; copyable?: boolean; icon?: React.ReactNode; color?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(fullValue ?? value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }, [fullValue, value]);
+
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-label-dim)" }}>
+        {label}
+      </p>
+      <div className="flex items-center gap-1.5">
+        <p
+          className="text-sm flex items-center gap-1.5 font-medium"
+          style={{ fontFamily: mono ? "monospace" : undefined, color: color ?? "var(--text-label)" }}
+        >
+          {icon}{value}
+        </p>
+        {copyable && (
+          <button
+            onClick={copy}
+            title="Copy address"
+            className="transition-all"
+            style={{ color: copied ? "#86efac" : "var(--text-muted)", lineHeight: 1 }}
+          >
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ShareButton() {
+  const [shared, setShared] = useState(false);
+  const share = useCallback(() => {
+    const url = window.location.href;
+    if (navigator.share) {
+      navigator.share({ title: document.title, url });
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        setShared(true);
+        setTimeout(() => setShared(false), 1800);
+      });
+    }
+  }, []);
+
+  return (
+    <button
+      onClick={share}
+      title="Share this job"
+      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+      style={{
+        background: "var(--surface-raised)",
+        border: "1px solid var(--border-mid)",
+        color: shared ? "#86efac" : "var(--text-muted)",
+      }}
+    >
+      {shared ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
 
 function Section({ title, children, accent }: { title: string; children: React.ReactNode; accent?: string }) {
   return (

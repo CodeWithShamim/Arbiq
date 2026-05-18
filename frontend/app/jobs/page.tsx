@@ -6,8 +6,17 @@ import { JobCard, JobCardSkeleton } from '@/components/JobCard';
 import { useGetAllJobs } from '@/hooks/useArbiqContract';
 import { JobStatus } from '@/lib/types';
 import Link from 'next/link';
-import { PlusCircle, Search, SlidersHorizontal } from 'lucide-react';
+import { PlusCircle, Search, ArrowUpDown, TrendingUp, TrendingDown, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type SortKey = 'newest' | 'budget-desc' | 'budget-asc' | 'deadline';
+
+const SORTS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
+  { key: 'newest',      label: 'Newest',        icon: <Clock className="w-3 h-3" /> },
+  { key: 'budget-desc', label: 'Budget: High',  icon: <TrendingDown className="w-3 h-3" /> },
+  { key: 'budget-asc',  label: 'Budget: Low',   icon: <TrendingUp className="w-3 h-3" /> },
+  { key: 'deadline',    label: 'Deadline Soon',  icon: <Clock className="w-3 h-3" /> },
+];
 
 const FILTERS: { label: string; value: JobStatus | 'all'; dot?: string }[] = [
   { label: 'All', value: 'all' },
@@ -22,6 +31,8 @@ export default function BrowseJobsPage() {
   const { data: jobs = [], isLoading, error } = useGetAllJobs();
   const [filter, setFilter] = useState<JobStatus | 'all'>('all');
   const [search, setSearch] = useState('');
+  const [sort, setSort]     = useState<SortKey>('newest');
+  const [showSort, setShowSort] = useState(false);
 
   const filtered = jobs
     .filter((j) => filter === 'all' || j.status === filter)
@@ -32,7 +43,13 @@ export default function BrowseJobsPage() {
         j.description.toLowerCase().includes(search.toLowerCase()),
     )
     .slice()
-    .reverse();
+    .sort((a, b) => {
+      if (sort === 'newest')      return b.id - a.id;
+      if (sort === 'budget-desc') return b.budget - a.budget;
+      if (sort === 'budget-asc')  return a.budget - b.budget;
+      if (sort === 'deadline')    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      return 0;
+    });
 
   const counts: Record<string, number> = { all: jobs.length };
   jobs.forEach((j) => {
@@ -88,17 +105,46 @@ export default function BrowseJobsPage() {
               style={{ borderRadius: '12px' }}
             />
           </div>
-          <button
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors sm:w-auto"
-            style={{
-              background: 'var(--surface-raised)',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            Filter
-          </button>
+          {/* Sort dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSort((v) => !v)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: showSort ? 'rgba(124,58,237,0.15)' : 'var(--surface-raised)',
+                border: `1px solid ${showSort ? 'rgba(124,58,237,0.35)' : 'var(--border-subtle)'}`,
+                color: showSort ? '#c4b5fd' : 'var(--text-secondary)',
+              }}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              {SORTS.find((s) => s.key === sort)?.label ?? 'Sort'}
+            </button>
+            {showSort && (
+              <div
+                className="absolute right-0 top-full mt-2 w-44 rounded-xl overflow-hidden z-20 anim-scale-in"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-mid)',
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+                }}
+              >
+                {SORTS.map(({ key, label, icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => { setSort(key); setShowSort(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
+                    style={{
+                      color: sort === key ? '#a78bfa' : 'var(--text-secondary)',
+                      background: sort === key ? 'rgba(124,58,237,0.1)' : 'transparent',
+                      fontWeight: sort === key ? 600 : 400,
+                    }}
+                  >
+                    {icon}{label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Status tabs */}

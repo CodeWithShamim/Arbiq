@@ -421,6 +421,16 @@ body {
   box-shadow: 0 4px 16px rgba(124,58,237,0.35), 0 0 0 1px rgba(167,139,250,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 
+/* ── Copy success flash ──────────────────────────────────────────────────── */
+@keyframes copyFlash {
+  0%   { transform: scale(1.4); }
+  100% { transform: scale(1);   }
+}
+.copy-flash { animation: copyFlash 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* ── Stat counter ────────────────────────────────────────────────────────── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
 /* ── ConsensusTxStatus panel ────────────────────────────────────────────────── */
 @keyframes phaseDots {
   0%   { content: "";   }
