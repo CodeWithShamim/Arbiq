@@ -70,11 +70,14 @@ Requirements:
         className="pt-24 pb-10 px-4 md:px-8 relative overflow-hidden"
         style={{ borderBottom: "1px solid var(--border-page)" }}
       >
-        <div className="orb orb-violet absolute w-80 h-80 -top-20 right-10 opacity-25" />
+        <div className="dot-grid opacity-30" style={{ bottom: 'auto', height: '100%' }} />
+        <div className="orb orb-violet absolute w-80 h-80 -top-20 right-10 opacity-25 pointer-events-none" />
         <div className="max-w-2xl mx-auto relative z-10">
-          <p className="label mb-2" style={{ color: "#7c3aed" }}>Create</p>
-          <h1 className="headline" style={{ color: 'var(--text-primary)' }}>Post a Job</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+          <p className="label mb-3" style={{ color: "#7c3aed" }}>Create</p>
+          <h1 className="font-display text-5xl" style={{ color: 'var(--text-primary)', letterSpacing: '0.04em' }}>
+            POST A JOB
+          </h1>
+          <p className="text-sm mt-2 font-medium" style={{ color: "var(--text-muted)" }}>
             Your budget locks in escrow instantly. AI reads your description to judge deliveries.
           </p>
         </div>
@@ -234,7 +237,7 @@ function Field({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
-        <label className="text-sm font-semibold" style={{ color: "var(--text-label)" }}>
+        <label className="text-xs font-bold" style={{ color: "var(--text-label)", letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {label}
         </label>
         {hint && (

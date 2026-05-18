@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { JobCard, JobCardSkeleton } from '@/components/JobCard';
 import { useGetAllJobs } from '@/hooks/useArbiqContract';
+import { useLocalFavorites } from '@/hooks/useLocalFavorites';
 import { JobStatus } from '@/lib/types';
 import Link from 'next/link';
-import { PlusCircle, Search, ArrowUpDown, TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { Search, ArrowUpDown, TrendingUp, TrendingDown, Clock, Heart, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Footer } from '@/components/Footer';
+import { PostJobFAB } from '@/components/PostJobFAB';
 
 type SortKey = 'newest' | 'budget-desc' | 'budget-asc' | 'deadline';
 
@@ -29,12 +32,16 @@ const FILTERS: { label: string; value: JobStatus | 'all'; dot?: string }[] = [
 
 export default function BrowseJobsPage() {
   const { data: jobs = [], isLoading, error } = useGetAllJobs();
+  const { isFavorite, favorites } = useLocalFavorites();
   const [filter, setFilter] = useState<JobStatus | 'all'>('all');
+  const [showFavs, setShowFavs] = useState(false);
   const [search, setSearch] = useState('');
   const [sort, setSort]     = useState<SortKey>('newest');
   const [showSort, setShowSort] = useState(false);
 
-  const filtered = jobs
+  const base = showFavs ? jobs.filter((j) => isFavorite(j.id)) : jobs;
+
+  const filtered = base
     .filter((j) => filter === 'all' || j.status === filter)
     .filter(
       (j) =>
@@ -51,8 +58,8 @@ export default function BrowseJobsPage() {
       return 0;
     });
 
-  const counts: Record<string, number> = { all: jobs.length };
-  jobs.forEach((j) => {
+  const counts: Record<string, number> = { all: base.length };
+  base.forEach((j) => {
     counts[j.status] = (counts[j.status] ?? 0) + 1;
   });
 
@@ -72,8 +79,10 @@ export default function BrowseJobsPage() {
               <p className="label mb-2" style={{ color: '#7c3aed' }}>
                 Marketplace
               </p>
-              <h1 className="headline" style={{ color: 'var(--text-primary)' }}>Browse Jobs</h1>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+              <h1 className="font-display text-5xl" style={{ color: 'var(--text-primary)', letterSpacing: '0.04em' }}>
+                BROWSE JOBS
+              </h1>
+              <p className="text-sm mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
                 {jobs.length} job{jobs.length !== 1 ? 's' : ''} posted on-chain
               </p>
             </div>
@@ -89,36 +98,89 @@ export default function BrowseJobsPage() {
       </div>
 
       <main className="px-4 md:px-8 py-8 max-w-6xl mx-auto">
-        {/* Search + filter bar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
+        {/* Search + filter bar — single row at all breakpoints */}
+        <div className="flex items-center gap-2 mb-6 w-full">
+          {/* Search input — takes all remaining space, buttons never overlap */}
+          <div className="relative" style={{ flex: '1 1 0', minWidth: 0 }}>
             <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
               style={{ color: '#5a5a7a' }}
             />
             <input
               type="text"
-              placeholder="Search by title or description…"
+              placeholder="Search jobs…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input-field pl-11 pr-4"
-              style={{ borderRadius: '12px' }}
+              style={{
+                display: 'block',
+                width: '100%',
+                minWidth: 0,
+                height: '44px',
+                paddingLeft: '2.75rem',
+                paddingRight: '1rem',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
+                borderRadius: '12px',
+                fontSize: '0.9375rem',
+                fontFamily: '"Darker Grotesque", system-ui, sans-serif',
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#7c3aed';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.12)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
-          {/* Sort dropdown */}
-          <div className="relative">
+
+          {/* Saved + Sort — never shrink, always right of search */}
+          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+            {/* Saved toggle */}
             <button
-              onClick={() => setShowSort((v) => !v)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+              onClick={() => setShowFavs((v) => !v)}
+              className="flex items-center gap-2 px-4 h-11 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
               style={{
-                background: showSort ? 'rgba(124,58,237,0.15)' : 'var(--surface-raised)',
-                border: `1px solid ${showSort ? 'rgba(124,58,237,0.35)' : 'var(--border-subtle)'}`,
-                color: showSort ? '#c4b5fd' : 'var(--text-secondary)',
+                background: showFavs ? 'rgba(239,68,68,0.12)' : 'var(--surface-raised)',
+                border: `1px solid ${showFavs ? 'rgba(239,68,68,0.3)' : 'var(--border-subtle)'}`,
+                color: showFavs ? '#f87171' : 'var(--text-secondary)',
               }}
             >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-              {SORTS.find((s) => s.key === sort)?.label ?? 'Sort'}
+              <Heart className="w-3.5 h-3.5 flex-shrink-0" fill={showFavs ? 'currentColor' : 'none'} />
+              Saved
+              {favorites.size > 0 && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                  style={{
+                    background: showFavs ? 'rgba(239,68,68,0.2)' : 'var(--surface-raised)',
+                    color: showFavs ? '#f87171' : 'var(--text-muted)',
+                    border: `1px solid ${showFavs ? 'rgba(239,68,68,0.25)' : 'var(--border-subtle)'}`,
+                  }}
+                >
+                  {favorites.size}
+                </span>
+              )}
             </button>
+
+            {/* Sort dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSort((v) => !v)}
+                className="flex items-center gap-2 px-4 h-11 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
+                style={{
+                  background: showSort ? 'rgba(124,58,237,0.15)' : 'var(--surface-raised)',
+                  border: `1px solid ${showSort ? 'rgba(124,58,237,0.35)' : 'var(--border-subtle)'}`,
+                  color: showSort ? '#c4b5fd' : 'var(--text-secondary)',
+                }}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+                {SORTS.find((s) => s.key === sort)?.label ?? 'Sort'}
+              </button>
             {showSort && (
               <div
                 className="absolute right-0 top-full mt-2 w-44 rounded-xl overflow-hidden z-20 anim-scale-in"
@@ -144,6 +206,7 @@ export default function BrowseJobsPage() {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </div>
 
@@ -199,6 +262,15 @@ export default function BrowseJobsPage() {
           })}
         </div>
 
+        {/* Result count */}
+        {!isLoading && !error && (
+          <p className="text-xs font-semibold mb-4" style={{ color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+            {filtered.length > 0
+              ? `SHOWING ${filtered.length} JOB${filtered.length !== 1 ? 'S' : ''}${showFavs ? ' · SAVED' : ''}`
+              : ''}
+          </p>
+        )}
+
         {/* Job grid */}
         {error ? (
           <div
@@ -232,13 +304,36 @@ export default function BrowseJobsPage() {
               border: '1px solid var(--border-subtle)',
             }}
           >
-            <p className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No jobs found</p>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {filter !== 'all' ? 'Try a different filter' : 'Be the first to post a job!'}
-            </p>
+            {showFavs ? (
+              <>
+                <Heart className="w-8 h-8 mx-auto mb-4 opacity-20" style={{ color: '#f87171' }} />
+                <p className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No saved jobs</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  Click the heart on any job card to save it here.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No jobs found</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {filter !== 'all' ? 'Try a different filter or clear search.' : 'Be the first to post a job!'}
+                </p>
+                {filter === 'all' && !search && (
+                  <a
+                    href="/jobs/new"
+                    className="inline-block mt-4 text-sm font-bold transition-colors"
+                    style={{ color: '#7c3aed' }}
+                  >
+                    Post a job →
+                  </a>
+                )}
+              </>
+            )}
           </div>
         )}
       </main>
+      <Footer />
+      <PostJobFAB />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# CLAUDE.md — Arbiq Freelance
+Arbiq Freelance
 
 ## Quick Commands
 

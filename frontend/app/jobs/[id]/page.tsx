@@ -19,6 +19,7 @@ import {
   Copy, Check, Share2,
 } from "lucide-react";
 import { ConsensusTxStatus } from "@/components/ConsensusTxStatus";
+import { Footer } from "@/components/Footer";
 import Link from "next/link";
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -100,7 +101,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </Link>
 
           <div className="flex items-start justify-between gap-4 mb-5">
-            <h1 className="headline leading-tight flex-1" style={{ color: "var(--text-primary)" }}>{job.title}</h1>
+            <h1 className="text-2xl md:text-3xl font-black leading-tight flex-1" style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{job.title}</h1>
             <div className="flex items-center gap-2 flex-shrink-0">
               <StatusBadge status={job.status} />
               <ShareButton />
@@ -125,9 +126,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <MetaItem label="Budget" value={formatBudget(job.budget)} color="#a78bfa" mono />
             <MetaItem label="Deadline" value={formatDeadline(job.deadline)} icon={<Calendar className="w-3.5 h-3.5" />} />
             <MetaItem label="Client" value={truncateAddress(job.client)} fullValue={job.client} mono copyable icon={<User className="w-3.5 h-3.5" />} />
-            {job.freelancer && (
+            {job.freelancer ? (
               <MetaItem label="Freelancer" value={truncateAddress(job.freelancer)} fullValue={job.freelancer} mono copyable icon={<Wallet className="w-3.5 h-3.5" />} />
-            )}
+            ) : job.created_at ? (
+              <MetaItem label="Posted" value={new Date(job.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} icon={<Clock className="w-3.5 h-3.5" />} />
+            ) : null}
           </div>
 
           {/* Description */}
@@ -386,6 +389,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
         </div>
       </main>
+      <Footer />
     </div>
   );
 }
