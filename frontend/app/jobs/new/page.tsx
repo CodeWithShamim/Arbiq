@@ -9,14 +9,31 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, CheckCircle2, Hash, Lock, Info } from "lucide-react";
+import { Loader2, AlertCircle, Lock, Info } from "lucide-react";
+import { ConsensusTxStatus } from "@/components/ConsensusTxStatus";
 
 export default function PostJobPage() {
   const router = useRouter();
   const { isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
 
-  const [form, setForm] = useState({ title: "", description: "", budget: "", deadline: "" });
+  const defaultDeadline = new Date();
+  defaultDeadline.setDate(defaultDeadline.getDate() + 7);
+  const defaultDeadlineStr = defaultDeadline.toISOString().split("T")[0];
+
+  const [form, setForm] = useState({
+    title: "Build a responsive landing page",
+    description: `Deliver a fully responsive 5-page website (Home, About, Services, Portfolio, Contact) using React + Tailwind CSS.
+
+Requirements:
+- Mobile-first responsive layout
+- Dark mode toggle
+- Contact form with validation
+- Smooth scroll animations
+- Deploy to Vercel and share the live URL`,
+    budget: "0.5",
+    deadline: defaultDeadlineStr,
+  });
   const { postJob, txState, isLoading } = usePostJob();
 
   useEffect(() => {
@@ -41,6 +58,7 @@ export default function PostJobPage() {
   const minDeadline = new Date();
   minDeadline.setDate(minDeadline.getDate() + 1);
   const minDateStr = minDeadline.toISOString().split("T")[0];
+
   const descLen = form.description.length;
 
   return (
@@ -170,32 +188,13 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
               </div>
             )}
 
-            {/* Tx hash */}
-            {txState.txHash && (
-              <div
-                className="flex items-center gap-2 p-3 rounded-xl text-xs"
-                style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)" }}
-              >
-                <Hash className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--text-muted)" }} />
-                <span style={{ color: "var(--text-muted)" }}>Tx:</span>
-                <code className="font-mono truncate flex-1" style={{ color: "#a78bfa" }}>{txState.txHash}</code>
-                {txState.status === "finalized" && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />}
-              </div>
-            )}
-
-            {/* Status lines */}
-            {txState.status === "pending" && (
-              <p className="text-sm flex items-center gap-2" style={{ color: "var(--color-warning)" }}>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Sending transaction to the network…
-              </p>
-            )}
-            {txState.status === "finalized" && (
-              <p className="text-sm flex items-center gap-2" style={{ color: "var(--color-success)" }}>
-                <CheckCircle2 className="w-4 h-4" />
-                Job posted! Redirecting…
-              </p>
-            )}
+            {/* Live consensus status */}
+            <ConsensusTxStatus
+              status={txState.status}
+              txHash={txState.txHash}
+              error={txState.error}
+              finalizingLabel="Validators confirming job & locking escrow…"
+            />
 
             {/* Submit */}
             <button

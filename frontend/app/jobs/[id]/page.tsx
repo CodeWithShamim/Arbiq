@@ -14,9 +14,10 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { truncateAddress, formatBudget, formatDeadline } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Loader2, ExternalLink, Calendar, Wallet, User, Hash,
+  Loader2, ExternalLink, Calendar, Wallet, User,
   Brain, CheckCircle2, AlertCircle, Clock, ArrowLeft,
 } from "lucide-react";
+import { ConsensusTxStatus } from "@/components/ConsensusTxStatus";
 import Link from "next/link";
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -167,7 +168,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     label="Accept & Start Working"
                     loadingLabel="Accepting…"
                   />
-                  <TxRow hash={takeState.txHash} status={takeState.status} />
+                  <ConsensusTxStatus
+                    status={takeState.status}
+                    txHash={takeState.txHash}
+                    error={takeState.error}
+                  />
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-4">
@@ -213,7 +218,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   />
                 </div>
                 <ActionButton type="submit" loading={submitting} label="Submit Delivery" loadingLabel="Submitting…" />
-                <TxRow hash={deliverState.txHash} status={deliverState.status} />
+                <ConsensusTxStatus
+                  status={deliverState.status}
+                  txHash={deliverState.txHash}
+                  error={deliverState.error}
+                />
               </form>
             </Section>
           )}
@@ -274,17 +283,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         loadingLabel="AI Validators reviewing…"
                         icon={<Brain className="w-4 h-4" />}
                       />
-                      {evaluating && (
-                        <div className="flex items-center gap-3 text-xs" style={{ color: "#a78bfa" }}>
-                          <div className="relative w-6 h-6 flex-shrink-0">
-                            <div className="orbit-dot" />
-                            <div className="orbit-dot" />
-                            <div className="orbit-dot" />
-                          </div>
-                          Waiting for AI consensus across validator nodes…
-                        </div>
-                      )}
-                      <TxRow hash={evalState.txHash} status={evalState.status} />
+                      <ConsensusTxStatus
+                        status={evalState.status}
+                        txHash={evalState.txHash}
+                        error={evalState.error}
+                        finalizingLabel="AI validators reading evidence & reaching consensus…"
+                      />
                     </div>
 
                     {/* Divider */}
@@ -315,7 +319,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       >
                         {releasing ? <><Loader2 className="w-4 h-4 animate-spin" /> Releasing…</> : <><CheckCircle2 className="w-4 h-4" /> Approve & Pay Manually</>}
                       </button>
-                      <TxRow hash={releaseState.txHash} status={releaseState.status} />
+                      <ConsensusTxStatus
+                        status={releaseState.status}
+                        txHash={releaseState.txHash}
+                        error={releaseState.error}
+                      />
                     </div>
                   </div>
                 </Section>
@@ -445,23 +453,3 @@ function ActionButton({
   );
 }
 
-function TxRow({ hash, status }: { hash: string | null; status: string }) {
-  if (!hash) return null;
-  return (
-    <div
-      className="flex items-center gap-2 p-2.5 rounded-lg text-xs"
-      style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)" }}
-    >
-      <Hash className="w-3 h-3 flex-shrink-0" style={{ color: "var(--text-muted)" }} />
-      <code className="font-mono truncate flex-1" style={{ color: "#a78bfa" }}>{hash}</code>
-      <span
-        className="text-[10px] font-bold uppercase flex-shrink-0"
-        style={{
-          color: status === "finalized" ? "#86efac" : status === "error" ? "#fca5a5" : "#fcd34d",
-        }}
-      >
-        {status}
-      </span>
-    </div>
-  );
-}
