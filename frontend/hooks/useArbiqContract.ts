@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, useWalletClient } from "wagmi";
 import { parseEther, encodeFunctionData } from "viem";
+import type { CalldataEncodable, TransactionHash } from "genlayer-js/types";
+import { TransactionStatus } from "genlayer-js/types";
 import { genLayerClient, CONTRACT_ADDRESS } from "@/lib/genlayer/client";
 import type { Job } from "@/lib/types";
 
@@ -57,11 +59,11 @@ const ARBIQ_ABI = [
 
 // ─── Read helpers via genlayer-js ────────────────────────────────────────────
 
-async function readContract(method: string, args: unknown[] = []): Promise<unknown> {
+async function readContract(method: string, args: CalldataEncodable[] = []): Promise<unknown> {
   return genLayerClient.readContract({
     address: CONTRACT_ADDRESS,
     functionName: method,
-    args: args as never[],
+    args,
   });
 }
 
@@ -92,9 +94,11 @@ export function useGetAllJobs() {
     queryKey: ["arbiq", "allJobs"],
     queryFn: async () => {
       const raw = await readContract("get_all_jobs");
+      console.log("[useGetAllJobs] raw response:", raw);
       return parseJobsJson(raw);
     },
     refetchInterval: 15_000,
+    retry: 2,
   });
 }
 
@@ -136,7 +140,7 @@ export function useGetJobCount() {
 // ─── Write hook factory ───────────────────────────────────────────────────────
 
 interface TxState {
-  txHash: string | null;
+  txHash: TransactionHash | null;
   status: "idle" | "pending" | "finalizing" | "finalized" | "error";
   error: string | null;
 }
@@ -157,31 +161,21 @@ function useContractWrite() {
   }, []);
 
   const pollStatus = useCallback(
-    async (hash: string) => {
+    async (hash: TransactionHash) => {
       setTxState((s) => ({ ...s, status: "finalizing" }));
-      const maxAttempts = 60; // 3 min max
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((r) => setTimeout(r, 3_000));
-        try {
-          const receipt = await genLayerClient.getTransactionReceipt({ hash: hash as `0x${string}` });
-          if (receipt && receipt.status === "success") {
-            setTxState((s) => ({ ...s, status: "finalized" }));
-            queryClient.invalidateQueries({ queryKey: ["arbiq"] });
-            return;
-          }
-          if (receipt && receipt.status === "reverted") {
-            setTxState((s) => ({
-              ...s,
-              status: "error",
-              error: "Transaction reverted",
-            }));
-            return;
-          }
-        } catch {
-          // not yet mined — keep polling
-        }
+      try {
+        await genLayerClient.waitForTransactionReceipt({
+          hash,
+          status: TransactionStatus.ACCEPTED,
+          retries: 60,
+          interval: 3_000,
+        });
+        setTxState((s) => ({ ...s, status: "finalized" }));
+        queryClient.invalidateQueries({ queryKey: ["arbiq"] });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Transaction failed";
+        setTxState((s) => ({ ...s, status: "error", error: msg }));
       }
-      setTxState((s) => ({ ...s, status: "error", error: "Timed out waiting for finalization" }));
     },
     [queryClient]
   );
@@ -216,12 +210,14 @@ function useContractWrite() {
           to: CONTRACT_ADDRESS,
           data,
           value: value ?? 0n,
+          gas: 1_000_000n,
         });
 
-        setTxState((s) => ({ ...s, txHash: hash }));
+        const txHash = hash as TransactionHash;
+        setTxState((s) => ({ ...s, txHash }));
 
         if (isNonDeterministic) {
-          pollStatus(hash);
+          pollStatus(txHash);
         } else {
           setTxState((s) => ({ ...s, status: "finalized" }));
           queryClient.invalidateQueries({ queryKey: ["arbiq"] });

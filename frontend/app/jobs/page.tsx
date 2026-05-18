@@ -19,7 +19,7 @@ const FILTERS: { label: string; value: JobStatus | 'all'; dot?: string }[] = [
 ];
 
 export default function BrowseJobsPage() {
-  const { data: jobs = [], isLoading } = useGetAllJobs();
+  const { data: jobs = [], isLoading, error } = useGetAllJobs();
   const [filter, setFilter] = useState<JobStatus | 'all'>('all');
   const [search, setSearch] = useState('');
 
@@ -154,7 +154,17 @@ export default function BrowseJobsPage() {
         </div>
 
         {/* Job grid */}
-        {isLoading ? (
+        {error ? (
+          <div
+            className="text-center py-28 rounded-2xl"
+            style={{ background: 'var(--surface-subtle)', border: '1px solid rgba(239,68,68,0.2)' }}
+          >
+            <p className="font-semibold mb-2" style={{ color: '#f87171' }}>Failed to load jobs</p>
+            <p className="text-sm font-mono" style={{ color: 'var(--text-muted)' }}>
+              {error instanceof Error ? error.message : String(error)}
+            </p>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <JobCardSkeleton key={i} />
