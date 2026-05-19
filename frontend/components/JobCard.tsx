@@ -19,9 +19,9 @@ function useDeadlineInfo(deadline: string) {
   return           { label: `${days}d left`,        urgent: false, color: "var(--text-muted)" };
 }
 
-function isNewJob(createdAt: string) {
-  const created = new Date(createdAt).getTime();
-  const ageHours = (Date.now() - created) / (1000 * 60 * 60);
+function isNewJob(createdAt: number) {
+  const ms = createdAt < 1_000_000_000_000 ? createdAt * 1000 : createdAt;
+  const ageHours = (Date.now() - ms) / (1000 * 60 * 60);
   return ageHours < 48;
 }
 

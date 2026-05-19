@@ -656,6 +656,40 @@ body:has([data-cursor-expand]:hover) #cursor-ring {
 [data-theme="dark"] .notif-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 [data-theme="light"] .notif-scroll::-webkit-scrollbar-thumb { background: rgba(109,40,217,0.18); border-radius: 4px; }
 
+/* ─── Dual-range slider thumbs ──────────────────────────────────────────── */
+.range-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  cursor: pointer;
+  outline: none;
+}
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #a78bfa;
+  border: 2px solid #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.18);
+  pointer-events: all;
+  cursor: grab;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.range-thumb::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.15); }
+.range-thumb::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #a78bfa;
+  border: 2px solid #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.18);
+  pointer-events: all;
+  cursor: grab;
+}
+
 /* ─── RainbowKit light-mode overrides ───────────────────────────────────── */
 [data-theme="light"] [data-rk] {
   --rk-colors-accentColor: #7c3aed;

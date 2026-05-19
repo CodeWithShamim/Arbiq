@@ -525,7 +525,7 @@ export default function AnalyticsPage() {
                     <CartesianGrid stroke={CHART_GRID} strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="day" tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                     <YAxis tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} width={44} unit=" GEN" />
-                    <Tooltip content={(props) => <ChartTip {...(props as Parameters<typeof ChartTip>[0])} unit=" GEN" />} />
+                    <Tooltip content={(props: Parameters<typeof ChartTip>[0]) => <ChartTip {...props} unit=" GEN" />} />
                     <Legend wrapperStyle={{ fontSize: 11, color: "var(--text-muted)", fontFamily: '"JetBrains Mono"', paddingTop: 8 }} />
                     <Area type="monotone" dataKey="daily"      name="Daily"      stroke="#38bdf8" fill="url(#gDaily)" strokeWidth={2} dot={false} />
                     <Area type="monotone" dataKey="cumulative" name="Cumulative" stroke="#a78bfa" fill="url(#gCumul)" strokeWidth={2} dot={false} />
@@ -551,7 +551,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid stroke={CHART_GRID} strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="label" tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} width={24} allowDecimals={false} />
-                  <Tooltip content={(props) => <ChartTip {...(props as Parameters<typeof ChartTip>[0])} />} />
+                  <Tooltip content={(props: Parameters<typeof ChartTip>[0]) => <ChartTip {...props} />} />
                   <Legend wrapperStyle={{ fontSize: 11, color: "var(--text-muted)", fontFamily: '"JetBrains Mono"', paddingTop: 8 }} />
                   <Bar dataKey="approved" name="Approved" fill="#22c55e" radius={[4,4,0,0]} maxBarSize={40} />
                   <Bar dataKey="disputed" name="Disputed" fill="#ef4444" radius={[4,4,0,0]} maxBarSize={40} />
@@ -578,7 +578,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid stroke={CHART_GRID} strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} width={40} unit="h" />
-                  <Tooltip content={(props) => <ChartTip {...(props as Parameters<typeof ChartTip>[0])} unit="h" />} />
+                  <Tooltip content={(props: Parameters<typeof ChartTip>[0]) => <ChartTip {...props} unit="h" />} />
                   <Line type="monotone" dataKey="hours" name="Hours" stroke="#f59e0b" strokeWidth={2.5}
                     dot={{ r: 4, fill: "#f59e0b", strokeWidth: 0 }}
                     activeDot={{ r: 6, fill: "#fbbf24", strokeWidth: 0 }} />
