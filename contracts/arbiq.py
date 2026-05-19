@@ -23,10 +23,12 @@ class _Recipient:
 class Arbiq(gl.Contract):
     job_count: u256
     jobs: TreeMap[u256, str]
+    messages: TreeMap[u256, str]
 
     def __init__(self):
         self.job_count = u256(0)
         self.jobs = TreeMap[u256, str]()
+        self.messages = TreeMap[u256, str]()
 
     def _load_job(self, job_id: u256):
         raw = self.jobs.get(job_id, "")
@@ -179,6 +181,28 @@ This result should be perfectly parseable by a JSON parser without errors."""
         job["status"] = STATUS_COMPLETED
         job["ai_reasoning"] = "Manually approved by client."
         self._save_job(jid, job)
+
+    @gl.public.write
+    def send_message(self, job_id: int, content: str) -> None:
+        jid = u256(job_id)
+        job = self._load_job(jid)
+        if job["status"] == STATUS_OPEN:
+            raise gl.vm.UserError("Cannot message before a freelancer takes the job")
+        sender = gl.message.sender_address.as_hex
+        if sender != job["client"] and sender != job["freelancer"]:
+            raise gl.vm.UserError("Only client or freelancer can message")
+        msgs = json.loads(self.messages.get(jid, "[]"))
+        msgs.append({
+            "sender": sender,
+            "content": content[:500],
+            "role": "client" if sender == job["client"] else "freelancer",
+            "timestamp": int(gl.message.timestamp),
+        })
+        self.messages[jid] = json.dumps(msgs)
+
+    @gl.public.view
+    def get_messages(self, job_id: int) -> str:
+        return self.messages.get(u256(job_id), "[]")
 
     @gl.public.view
     def get_job(self, job_id: int) -> str:

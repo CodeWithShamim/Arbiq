@@ -369,3 +369,48 @@ export function useRelease() {
     isLoading: txState.status === "pending" || txState.status === "finalizing",
   };
 }
+
+// ─── Chat hooks ───────────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  sender: string;
+  content: string;
+  role: "client" | "freelancer";
+  timestamp: number;
+  optimistic?: boolean;
+}
+
+export function useGetMessages(jobId: number | undefined) {
+  return useQuery({
+    queryKey: ["arbiq", "messages", jobId],
+    queryFn: async () => {
+      if (jobId === undefined) return [] as ChatMessage[];
+      const raw = await readContract("get_messages", [jobId]);
+      try {
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+        return (Array.isArray(parsed) ? parsed : []) as ChatMessage[];
+      } catch {
+        return [] as ChatMessage[];
+      }
+    },
+    enabled: jobId !== undefined,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useSendMessage() {
+  const { send, txState, reset } = useContractWrite();
+
+  const sendMessage = useCallback(
+    (jobId: number, content: string) =>
+      send({ functionName: "send_message", args: [jobId, content] }),
+    [send]
+  );
+
+  return {
+    sendMessage,
+    txState,
+    reset,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
