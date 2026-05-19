@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { readContract } from "@/lib/genlayer/client";
+import { useMemo } from "react";
+import { useGetAllJobs } from "@/hooks/useArbiqContract";
 import type { Job, JobStatus } from "@/lib/types";
 
 export type SortKey =
@@ -35,13 +35,13 @@ export const DEFAULT_FILTERS: JobFilters = {
 
 const CATEGORY_PATTERNS: [string, RegExp][] = [
   ["Smart Contract", /smart.?contract|solidity|evm|defi|blockchain|web3|nft|token/i],
-  ["Frontend", /react|nextjs|next\.js|vue|angular|svelte|ui\/ux|frontend|tailwind|css|html/i],
-  ["Backend", /node|express|django|fastapi|rest.?api|graphql|backend|server|database|postgres|mysql|mongodb/i],
-  ["Mobile", /ios|android|react.?native|flutter|swift|kotlin|mobile.?app/i],
-  ["Design", /design|figma|logo|branding|illustrat|photoshop|ux|ui design|graphic/i],
-  ["Data / AI", /machine.?learning|ai|llm|data.?science|python|analytics|model|nlp/i],
-  ["Writing", /writing|copywriting|content|article|blog|documentation|technical.?writ/i],
-  ["DevOps", /devops|docker|kubernetes|ci\/cd|aws|gcp|azure|cloud|infra|deployment/i],
+  ["Frontend",       /react|nextjs|next\.js|vue|angular|svelte|ui\/ux|frontend|tailwind|css|html/i],
+  ["Backend",        /node|express|django|fastapi|rest.?api|graphql|backend|server|database|postgres|mysql|mongodb/i],
+  ["Mobile",         /ios|android|react.?native|flutter|swift|kotlin|mobile.?app/i],
+  ["Design",         /design|figma|logo|branding|illustrat|photoshop|ux|ui design|graphic/i],
+  ["Data / AI",      /machine.?learning|ai|llm|data.?science|python|analytics|model|nlp/i],
+  ["Writing",        /writing|copywriting|content|article|blog|documentation|technical.?writ/i],
+  ["DevOps",         /devops|docker|kubernetes|ci\/cd|aws|gcp|azure|cloud|infra|deployment/i],
 ];
 
 export function detectCategory(job: Job): string {
@@ -52,67 +52,29 @@ export function detectCategory(job: Job): string {
   return "Other";
 }
 
-// ── Budget helpers ────────────────────────────────────────────────────────────
-
-function parseJobsJson(raw: unknown): Job[] {
-  try {
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return Array.isArray(parsed) ? (parsed as Job[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 // ── Deadline filter ───────────────────────────────────────────────────────────
 
 function deadlineInRange(deadline: string, range: DeadlineRange): boolean {
   if (range === "any") return true;
   const due = new Date(deadline).getTime();
   const now = Date.now();
-  if (range === "this-week") return due <= now + 7 * 86_400_000;
+  if (range === "this-week")  return due <= now + 7  * 86_400_000;
   if (range === "this-month") return due <= now + 30 * 86_400_000;
   return true;
 }
 
-// ── Main hook ─────────────────────────────────────────────────────────────────
+// ── Main hook — reads from the shared TanStack Query cache ────────────────────
 
 export function useJobs(filters: JobFilters) {
-  const [allJobs, setAllJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  // Shares the ["arbiq","allJobs"] cache with every other useGetAllJobs() caller.
+  // TanStack Query deduplicates concurrent fetches — only one gen_call fires.
+  const { data: allJobs = [], isLoading, error, refetch } = useGetAllJobs();
 
-  const fetchJobs = useCallback(async () => {
-    abortRef.current?.abort();
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const raw = await readContract("get_all_jobs");
-      if (ctrl.signal.aborted) return;
-      setAllJobs(parseJobsJson(raw));
-    } catch (e) {
-      if (ctrl.signal.aborted) return;
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      if (!ctrl.signal.aborted) setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchJobs();
-    return () => abortRef.current?.abort();
-  }, [fetchJobs]);
-
-  // Derive max budget from the job set for the slider ceiling
   const budgetCeiling = useMemo(
     () => (allJobs.length ? Math.max(...allJobs.map((j) => j.budget)) : 1000),
     [allJobs],
   );
 
-  // Derive category list from the job set
   const categories = useMemo(() => {
     const set = new Set<string>();
     allJobs.forEach((j) => set.add(detectCategory(j)));
@@ -126,14 +88,10 @@ export function useJobs(filters: JobFilters) {
 
     return allJobs
       .filter((j) => {
-        // Status
         if (!anyStatus && !statusSet.has(j.status)) return false;
-        // Budget
         if (j.budget < filters.budgetMin) return false;
         if (filters.budgetMax !== Infinity && j.budget > filters.budgetMax) return false;
-        // Deadline
         if (!deadlineInRange(j.deadline, filters.deadline)) return false;
-        // Search
         if (q && !j.title.toLowerCase().includes(q) && !j.description.toLowerCase().includes(q))
           return false;
         return true;
@@ -150,7 +108,6 @@ export function useJobs(filters: JobFilters) {
       });
   }, [allJobs, filters]);
 
-  // Per-status counts (from all jobs, ignoring filters except search+favs)
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: allJobs.length };
     allJobs.forEach((j) => {
@@ -163,8 +120,8 @@ export function useJobs(filters: JobFilters) {
     allJobs,
     filteredJobs,
     isLoading,
-    error,
-    refetch: fetchJobs,
+    error: error ? (error instanceof Error ? error.message : String(error)) : null,
+    refetch,
     budgetCeiling,
     categories,
     statusCounts,

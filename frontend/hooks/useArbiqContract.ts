@@ -39,7 +39,8 @@ export function useGetAllJobs() {
       const raw = await readContract("get_all_jobs");
       return parseJobsJson(raw);
     },
-    refetchInterval: 15_000,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }
@@ -53,7 +54,8 @@ export function useGetJob(id: number | undefined) {
       return parseJobJson(raw);
     },
     enabled: id !== undefined,
-    refetchInterval: 10_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
 }
 
@@ -382,7 +384,8 @@ export function useGetMessages(jobId: number | undefined) {
       }
     },
     enabled: jobId !== undefined,
-    refetchInterval: 10_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
 }
 

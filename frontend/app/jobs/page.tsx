@@ -142,7 +142,7 @@ export default function BrowseJobsPage() {
                   {error}
                 </p>
                 <button
-                  onClick={refetch}
+                  onClick={() => refetch()}
                   className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl text-sm font-semibold transition-all"
                   style={{
                     background: 'rgba(124,58,237,0.12)',
