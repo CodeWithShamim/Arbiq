@@ -113,7 +113,7 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
                 />
                 <span
                   className="absolute bottom-3 right-3 text-[11px] font-mono"
-                  style={{ color: descLen > 2700 ? "#ef4444" : "#5a5a7a" }}
+                  style={{ color: descLen > 2700 ? "#ef4444" : "var(--text-muted)" }}
                 >
                   {descLen}/3000
                 </span>

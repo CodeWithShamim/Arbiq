@@ -77,9 +77,9 @@
   --border-mid:    rgba(109,40,217,0.14);
   --border-strong: rgba(109,40,217,0.28);
 
-  --text-primary:  #1a0a3a;
-  --text-secondary:#5b4b8a;
-  --text-muted:    #9d8abf;
+  --text-primary:  #120828;
+  --text-secondary:#3b2a6e;
+  --text-muted:    #5e4e8a;
 
   --glow-violet:  0 0 32px rgba(124,58,237,0.15);
   --glow-success: 0 0 24px rgba(34,197,94,0.12);
@@ -110,9 +110,21 @@
   --border-page:    rgba(109,40,217,0.08);
 
   --text-label:     #4c1d9b;
-  --text-label-dim: #9d8abf;
+  --text-label-dim: #6b4fa8;
 
   --cursor-color: #1a0a3a;
+}
+
+/* ─── Semantic tokens (shared by components via var()) ───────────────────── */
+:root, [data-theme="dark"] {
+  --chart-grid:  rgba(255,255,255,0.05);
+  --chart-axis:  #5a5a7a;
+  --icon-muted:  #5a5a7a;
+}
+[data-theme="light"] {
+  --chart-grid:  rgba(109,40,217,0.08);
+  --chart-axis:  #6b5090;
+  --icon-muted:  #6b5090;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
@@ -688,6 +700,30 @@ body:has([data-cursor-expand]:hover) #cursor-ring {
   box-shadow: 0 0 0 3px rgba(124,58,237,0.18);
   pointer-events: all;
   cursor: grab;
+}
+
+/* ─── Code block (docs page) ─────────────────────────────────────────────── */
+[data-theme="dark"] .code-block {
+  background: rgba(0,0,0,0.50);
+}
+[data-theme="light"] .code-block {
+  background: #1e1330;
+}
+[data-theme="dark"] .code-block-header {
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  color: #7a6a9a;
+}
+[data-theme="light"] .code-block-header {
+  background: rgba(0,0,0,0.25);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  color: #9d8ec8;
+}
+[data-theme="dark"] .code-block-pre {
+  color: #c4b5fd;
+}
+[data-theme="light"] .code-block-pre {
+  color: #e2d9ff;
 }
 
 /* ─── RainbowKit light-mode overrides ───────────────────────────────────── */

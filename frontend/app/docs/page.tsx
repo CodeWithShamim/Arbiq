@@ -55,16 +55,15 @@ function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
   };
   return (
     <div
-      className="relative rounded-2xl overflow-hidden my-4"
-      style={{ background: "rgba(0,0,0,0.45)", border: "1px solid var(--border-mid)" }}
+      className="relative rounded-2xl overflow-hidden my-4 code-block"
+      style={{ border: "1px solid var(--border-mid)" }}
     >
       <div
-        className="flex items-center justify-between px-4 py-2"
-        style={{ borderBottom: "1px solid var(--border-divider)", background: "rgba(255,255,255,0.02)" }}
+        className="flex items-center justify-between px-4 py-2 code-block-header"
       >
         <span
           className="text-[10px] font-bold uppercase tracking-widest"
-          style={{ color: "var(--text-muted)", fontFamily: '"JetBrains Mono", monospace' }}
+          style={{ fontFamily: '"JetBrains Mono", monospace' }}
         >
           {lang}
         </span>
@@ -72,7 +71,7 @@ function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
           onClick={copy}
           className="flex items-center gap-1 text-[11px] font-semibold transition-all px-2 py-0.5 rounded-md"
           style={{
-            color: copied ? "#86efac" : "var(--text-muted)",
+            color: copied ? "#86efac" : undefined,
             background: copied ? "rgba(34,197,94,0.10)" : "transparent",
           }}
         >
@@ -81,8 +80,8 @@ function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
         </button>
       </div>
       <pre
-        className="overflow-x-auto p-5 text-sm leading-relaxed"
-        style={{ fontFamily: '"JetBrains Mono", monospace', color: "#c4b5fd", margin: 0 }}
+        className="overflow-x-auto p-5 text-sm leading-relaxed code-block-pre"
+        style={{ fontFamily: '"JetBrains Mono", monospace', margin: 0 }}
       >
         <code>{code.trim()}</code>
       </pre>

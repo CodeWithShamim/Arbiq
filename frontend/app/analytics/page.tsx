@@ -34,9 +34,9 @@ const STATUS_COLOR: Record<string, string> = {
   disputed:  "#ef4444",
 };
 
-const CHART_GRID    = "rgba(255,255,255,0.05)";
-const CHART_AXIS    = "#3a3a5a";
-const TOOLTIP_BG    = "#0e0e18";
+const CHART_GRID    = "var(--chart-grid)";
+const CHART_AXIS    = "var(--chart-axis)";
+const TOOLTIP_BG    = "var(--bg-elevated)";
 const TOOLTIP_BORDER = "rgba(124,58,237,0.3)";
 const BAR_COLORS    = ["#a78bfa","#38bdf8","#22c55e","#f59e0b","#fb923c","#ec4899","#6b7280"];
 
@@ -290,7 +290,7 @@ function ChartCard({ title, subtitle, accent, icon: Icon, children, note }: {
           <p className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>{title}</p>
         </div>
         <p className="text-xs ml-9" style={{ color: "var(--text-muted)" }}>{subtitle}</p>
-        {note && <p className="text-[10px] ml-9 mt-0.5 italic" style={{ color: "#5a5a7a" }}>{note}</p>}
+        {note && <p className="text-[10px] ml-9 mt-0.5 italic" style={{ color: "var(--text-muted)" }}>{note}</p>}
       </div>
       <div className="px-2 pb-4">{children}</div>
     </div>
@@ -310,8 +310,8 @@ function DonutLabel({ viewBox, total }: { viewBox?: { cx?: number; cy?: number }
   const { cx = 0, cy = 0 } = viewBox ?? {};
   return (
     <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central">
-      <tspan x={cx} dy="-8" style={{ fontSize: 26, fontWeight: 900, fill: "#f0f0ff", fontFamily: '"JetBrains Mono"' }}>{total}</tspan>
-      <tspan x={cx} dy="22"  style={{ fontSize: 10,  fontWeight: 700, fill: "#5a5a7a", letterSpacing: 2 }}>TOTAL</tspan>
+      <tspan x={cx} dy="-8" style={{ fontSize: 26, fontWeight: 900, fill: "var(--text-primary)", fontFamily: '"JetBrains Mono"' }}>{total}</tspan>
+      <tspan x={cx} dy="22"  style={{ fontSize: 10,  fontWeight: 700, fill: "var(--text-muted)", letterSpacing: 2 }}>TOTAL</tspan>
     </text>
   );
 }
@@ -371,7 +371,7 @@ export default function AnalyticsPage() {
                 ANALYTICS
               </h1>
               {noTimestamp > 0 && (
-                <p className="text-[11px] mt-1" style={{ color: "#5a5a7a", fontFamily: '"JetBrains Mono"' }}>
+                <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)", fontFamily: '"JetBrains Mono"' }}>
                   {withTimestamp}/{allJobs.length} jobs have timestamps · {noTimestamp} pre-update job{noTimestamp !== 1 ? "s" : ""} shown in ALL view only
                 </p>
               )}
@@ -481,8 +481,8 @@ export default function AnalyticsPage() {
                   {/* Manual center label overlay */}
                   <div className="relative" style={{ marginTop: -220 + 4, height: 220, pointerEvents: "none" }}>
                     <div className="absolute inset-0 flex items-center justify-center flex-col">
-                      <span style={{ fontFamily: '"JetBrains Mono"', fontSize: 26, fontWeight: 900, color: "#f0f0ff", lineHeight: 1 }}>{jobs.length}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#5a5a7a", letterSpacing: 2 }}>TOTAL</span>
+                      <span style={{ fontFamily: '"JetBrains Mono"', fontSize: 26, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1 }}>{jobs.length}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: 2 }}>TOTAL</span>
                     </div>
                   </div>
                   {/* Legend */}
@@ -682,7 +682,7 @@ export default function AnalyticsPage() {
                     <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--text-muted)", fontFamily: '"JetBrains Mono"' }}>
                       {job.created_at
                         ? new Date(toMs(job.created_at)).toLocaleDateString("en-US",{ month:"short", day:"numeric"})
-                        : <span style={{ color: "#3a3a5a" }}>—</span>
+                        : <span style={{ color: "var(--text-muted)" }}>—</span>
                       }
                     </td>
                   </tr>

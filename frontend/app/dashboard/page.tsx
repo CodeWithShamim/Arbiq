@@ -56,7 +56,7 @@ export default function DashboardPage() {
     { label: "Jobs Posted",     value: String(postedJobs.length), icon: Briefcase,     accent: "#7c3aed", glow: "rgba(124,58,237,0.12)" },
     { label: "Working On",      value: String(activeJobs.length), icon: TrendingUp,    accent: "#38bdf8", glow: "rgba(56,189,248,0.10)" },
     { label: "Total Earned",    value: formatBudget(totalEarned), icon: Wallet,        accent: "#22c55e", glow: "rgba(34,197,94,0.10)" },
-    { label: "Active Disputes", value: String(disputes),          icon: AlertTriangle, accent: disputes > 0 ? "#ef4444" : "#5a5a7a", glow: disputes > 0 ? "rgba(239,68,68,0.10)" : "transparent" },
+    { label: "Active Disputes", value: String(disputes),          icon: AlertTriangle, accent: disputes > 0 ? "#ef4444" : "var(--icon-muted)", glow: disputes > 0 ? "rgba(239,68,68,0.10)" : "transparent" },
   ];
 
   return (

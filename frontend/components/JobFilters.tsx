@@ -343,7 +343,7 @@ export function JobFilterBar({
         <div className="relative" style={{ flex: "1 1 0", minWidth: 0 }}>
           <Search
             className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-            style={{ color: "#5a5a7a" }}
+            style={{ color: "var(--icon-muted)" }}
           />
           <input
             type="text"
