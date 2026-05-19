@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/",          label: "Home"      },
   { href: "/jobs",      label: "Browse"    },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/docs",      label: "Docs"      },
 ];
 
 function truncate(addr: string) {
