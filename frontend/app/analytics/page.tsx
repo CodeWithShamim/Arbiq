@@ -247,6 +247,20 @@ function ChartTip({ active, payload, label, unit = "" }: {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function PieTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0];
+  const color = entry?.payload?.color ?? "#a78bfa";
+  return (
+    <div style={{ background: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: 10, padding: "8px 12px" }}>
+      <p style={{ color, fontSize: 12, fontFamily: '"JetBrains Mono"', fontWeight: 700 }}>
+        {String(entry.name).toUpperCase()}: {entry.value}
+      </p>
+    </div>
+  );
+}
+
 /* ─── Trend arrow ────────────────────────────────────────────────────────── */
 
 function Trend({ curr, prev, suffix = "" }: { curr: number; prev: number; suffix?: string }) {
@@ -461,17 +475,7 @@ export default function AnalyticsPage() {
                         {statusDonut.map((e) => <Cell key={e.status} fill={e.color} stroke="transparent" />)}
                         {/* Center label rendered as recharts label prop */}
                       </Pie>
-                      <Tooltip
-                        content={({ active, payload }: { active?: boolean; payload?: { name: string; value: number; payload: { color: string } }[] }) =>
-                          active && payload?.length ? (
-                            <div style={{ background: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: 10, padding: "8px 12px" }}>
-                              <p style={{ color: payload[0].payload.color, fontSize: 12, fontFamily: '"JetBrains Mono"', fontWeight: 700 }}>
-                                {String(payload[0].name).toUpperCase()}: {payload[0].value}
-                              </p>
-                            </div>
-                          ) : null
-                        }
-                      />
+                      <Tooltip content={<PieTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
                   {/* Manual center label overlay */}
@@ -525,7 +529,7 @@ export default function AnalyticsPage() {
                     <CartesianGrid stroke={CHART_GRID} strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="day" tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                     <YAxis tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} width={44} unit=" GEN" />
-                    <Tooltip content={(props: Parameters<typeof ChartTip>[0]) => <ChartTip {...props} unit=" GEN" />} />
+                    <Tooltip content={(props: any) => <ChartTip {...props} unit=" GEN" />} />
                     <Legend wrapperStyle={{ fontSize: 11, color: "var(--text-muted)", fontFamily: '"JetBrains Mono"', paddingTop: 8 }} />
                     <Area type="monotone" dataKey="daily"      name="Daily"      stroke="#38bdf8" fill="url(#gDaily)" strokeWidth={2} dot={false} />
                     <Area type="monotone" dataKey="cumulative" name="Cumulative" stroke="#a78bfa" fill="url(#gCumul)" strokeWidth={2} dot={false} />
@@ -551,7 +555,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid stroke={CHART_GRID} strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="label" tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} width={24} allowDecimals={false} />
-                  <Tooltip content={(props: Parameters<typeof ChartTip>[0]) => <ChartTip {...props} />} />
+                  <Tooltip content={(props: any) => <ChartTip {...props} />} />
                   <Legend wrapperStyle={{ fontSize: 11, color: "var(--text-muted)", fontFamily: '"JetBrains Mono"', paddingTop: 8 }} />
                   <Bar dataKey="approved" name="Approved" fill="#22c55e" radius={[4,4,0,0]} maxBarSize={40} />
                   <Bar dataKey="disputed" name="Disputed" fill="#ef4444" radius={[4,4,0,0]} maxBarSize={40} />
@@ -578,7 +582,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid stroke={CHART_GRID} strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: CHART_AXIS, fontSize: 10, fontFamily: '"JetBrains Mono"' }} axisLine={false} tickLine={false} width={40} unit="h" />
-                  <Tooltip content={(props: Parameters<typeof ChartTip>[0]) => <ChartTip {...props} unit="h" />} />
+                  <Tooltip content={(props: any) => <ChartTip {...props} unit="h" />} />
                   <Line type="monotone" dataKey="hours" name="Hours" stroke="#f59e0b" strokeWidth={2.5}
                     dot={{ r: 4, fill: "#f59e0b", strokeWidth: 0 }}
                     activeDot={{ r: 6, fill: "#fbbf24", strokeWidth: 0 }} />
