@@ -3,6 +3,8 @@ import "./globals.css";
 import "@rainbow-me/rainbowkit/styles.css";
 import { Providers, WrongNetworkBanner } from "./providers";
 import { Cursor } from "@/components/Cursor";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ErrorProvider } from "@/lib/error-context";
 
 export const metadata: Metadata = {
   title: "Arbiq — AI-Enforced Freelance Contracts",
@@ -24,8 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Cursor />
         <Providers>
-          <WrongNetworkBanner />
-          {children}
+          <ErrorBoundary>
+            <ErrorProvider>
+              <WrongNetworkBanner />
+              {children}
+            </ErrorProvider>
+          </ErrorBoundary>
         </Providers>
       </body>
     </html>

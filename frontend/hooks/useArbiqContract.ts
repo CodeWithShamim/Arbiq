@@ -9,6 +9,8 @@ import type { CalldataEncodable, TransactionHash } from "genlayer-js/types";
 import { isDecidedState, transactionsStatusNumberToName } from "genlayer-js/types";
 import { genLayerClient, createClient, testnetBradbury, CONTRACT_ADDRESS, readContract } from "@/lib/genlayer/client";
 import type { Job } from "@/lib/types";
+import { useError } from "@/lib/error-context";
+import { friendlyError } from "@/lib/errors";
 
 function parseJobsJson(raw: unknown): Job[] {
   try {
@@ -103,10 +105,9 @@ interface TxState {
 
 function useContractWrite() {
   const { address } = useAccount();
-  // walletClient is the wagmi-managed EIP-1193 provider for the connected wallet
-  // (RainbowKit, WalletConnect, Coinbase, etc.) — NOT tied to window.ethereum
   const { data: walletClient } = useWalletClient();
   const queryClient = useQueryClient();
+  const { showError } = useError();
 
   const [txState, setTxState] = useState<TxState>({
     txHash: null,
@@ -161,13 +162,11 @@ function useContractWrite() {
         }
       }
 
-      setTxState((s) => ({
-        ...s,
-        status: "error",
-        error: `Timed out after ${maxRetries}s waiting for consensus`,
-      }));
+      const timeoutMsg = `Timed out after ${maxRetries}s waiting for consensus`;
+      setTxState((s) => ({ ...s, status: "error", error: timeoutMsg }));
+      showError(new Error(timeoutMsg));
     },
-    [queryClient]
+    [queryClient, showError]
   );
 
   const send = useCallback(
@@ -184,7 +183,9 @@ function useContractWrite() {
       retries?: number;
     }) => {
       if (!address || !walletClient) {
-        setTxState((s) => ({ ...s, status: "error", error: "Wallet not connected" }));
+        const msg = "Wallet not connected";
+        setTxState((s) => ({ ...s, status: "error", error: msg }));
+        showError(new Error(msg));
         return null;
       }
 
@@ -221,8 +222,9 @@ function useContractWrite() {
 
         return txHash;
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Transaction failed";
+        const msg = friendlyError(err);
         setTxState({ txHash: null, status: "error", consensusStatus: null, returnValue: null, error: msg });
+        showError(err);
         return null;
       }
     },
