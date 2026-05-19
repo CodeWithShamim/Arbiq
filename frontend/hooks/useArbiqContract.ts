@@ -7,20 +7,8 @@ import { useAccount, useWalletClient } from "wagmi";
 import { parseEther } from "viem";
 import type { CalldataEncodable, TransactionHash } from "genlayer-js/types";
 import { isDecidedState, transactionsStatusNumberToName } from "genlayer-js/types";
-import { genLayerClient, createClient, testnetBradbury, CONTRACT_ADDRESS } from "@/lib/genlayer/client";
+import { genLayerClient, createClient, testnetBradbury, CONTRACT_ADDRESS, readContract } from "@/lib/genlayer/client";
 import type { Job } from "@/lib/types";
-
-// ─── Read helpers ─────────────────────────────────────────────────────────────
-// genLayerClient.readContract sends gen_call(type:"read") → msgpack encodes args,
-// decodes the msgpack response, and returns a JS-safe value automatically.
-
-async function readContract(method: string, args: CalldataEncodable[] = []): Promise<unknown> {
-  return genLayerClient.readContract({
-    address: CONTRACT_ADDRESS,
-    functionName: method,
-    args,
-  });
-}
 
 function parseJobsJson(raw: unknown): Job[] {
   try {

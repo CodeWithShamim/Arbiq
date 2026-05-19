@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTheme } from "@/lib/theme-context";
 import { PlusCircle, Sun, Moon, ChevronDown, LogOut } from "lucide-react";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 const navLinks = [
   { href: "/",          label: "Home"      },
@@ -95,6 +96,9 @@ export function Navbar() {
           <PlusCircle className="w-3.5 h-3.5" />
           Post
         </Link>
+
+        {/* Notifications */}
+        <NotificationCenter />
 
         {/* Theme toggle */}
         <button
