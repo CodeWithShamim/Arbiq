@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { ConsensusTxStatus } from '@/components/ConsensusTxStatus';
 import { JobChat } from '@/components/JobChat';
+import { EvidencePreview } from '@/components/EvidencePreview';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 
@@ -261,6 +262,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     value={evidenceUrl}
                     onChange={(e) => setEvidenceUrl(e.target.value)}
                     disabled={submitting}
+                  />
+                  <EvidencePreview
+                    url={evidenceUrl}
+                    jobTitle={job.title}
+                    jobDescription={job.description}
                   />
                 </div>
                 <div className="space-y-2">
