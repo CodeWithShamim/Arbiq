@@ -5,10 +5,11 @@ import { Github, Twitter, ExternalLink } from "lucide-react";
 
 const LINKS = {
   product: [
-    { label: "Browse Jobs",  href: "/jobs" },
-    { label: "Post a Job",   href: "/jobs/new" },
-    { label: "Dashboard",    href: "/dashboard" },
-    { label: "Docs",         href: "/docs" },
+    { label: "Browse Jobs",  href: "/jobs"       },
+    { label: "Post a Job",   href: "/jobs/new"   },
+    { label: "Dashboard",    href: "/dashboard"  },
+    { label: "Analytics",    href: "/analytics"  },
+    { label: "Docs",         href: "/docs"       },
   ],
   chain: [
     { label: "GenLayer Explorer", href: "https://explorer-bradbury.genlayer.com", external: true },

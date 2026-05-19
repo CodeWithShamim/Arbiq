@@ -66,6 +66,8 @@ class Arbiq(gl.Contract):
             "evidence_url": "",
             "evidence_note": "",
             "ai_reasoning": "",
+            "created_at": int(gl.message.timestamp),
+            "updated_at": int(gl.message.timestamp),
         }
         self._save_job(job_id, job)
 
@@ -80,6 +82,7 @@ class Arbiq(gl.Contract):
             raise gl.vm.UserError("Client cannot take their own job")
         job["freelancer"] = caller
         job["status"] = STATUS_ACTIVE
+        job["updated_at"] = int(gl.message.timestamp)
         self._save_job(jid, job)
 
     @gl.public.write
@@ -96,6 +99,7 @@ class Arbiq(gl.Contract):
         job["evidence_url"] = evidence_url.strip()
         job["evidence_note"] = evidence_note.strip() if evidence_note else ""
         job["status"] = STATUS_DELIVERED
+        job["updated_at"] = int(gl.message.timestamp)
         self._save_job(jid, job)
 
     @gl.public.write
@@ -162,6 +166,7 @@ This result should be perfectly parseable by a JSON parser without errors."""
 
         job["ai_reasoning"] = reasoning
         job["status"] = STATUS_COMPLETED if approved else STATUS_DISPUTED
+        job["updated_at"] = int(gl.message.timestamp)
 
         if approved:
             _Recipient(Address(freelancer_hex)).emit_transfer(value=budget)
@@ -180,6 +185,7 @@ This result should be perfectly parseable by a JSON parser without errors."""
         _Recipient(Address(job["freelancer"])).emit_transfer(value=job["budget"])
         job["status"] = STATUS_COMPLETED
         job["ai_reasoning"] = "Manually approved by client."
+        job["updated_at"] = int(gl.message.timestamp)
         self._save_job(jid, job)
 
     @gl.public.write

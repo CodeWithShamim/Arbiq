@@ -8,10 +8,11 @@ import { PlusCircle, Sun, Moon, ChevronDown, LogOut } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
 
 const navLinks = [
-  { href: "/",          label: "Home"      },
-  { href: "/jobs",      label: "Browse"    },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/docs",      label: "Docs"      },
+  { href: "/",           label: "Home"      },
+  { href: "/jobs",       label: "Browse"    },
+  { href: "/dashboard",  label: "Dashboard" },
+  { href: "/analytics",  label: "Analytics" },
+  { href: "/docs",       label: "Docs"      },
 ];
 
 function truncate(addr: string) {
