@@ -124,7 +124,7 @@ export default function DashboardPage() {
 function ReputationSection({ address }: { address: string | undefined }) {
   const { data: profile } = useGetProfile(address);
 
-  if (!profile || (profile.jobs_completed === 0 && profile.jobs_disputed === 0)) return null;
+  if (!profile) return null;
 
   const score = profile.reputation_score;
   const scoreColor = score >= 80 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
@@ -138,7 +138,7 @@ function ReputationSection({ address }: { address: string | undefined }) {
       <div className="flex items-center gap-2 mb-5">
         <Star className="w-4 h-4" style={{ color: "#a78bfa" }} />
         <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-label)" }}>
-          Your Freelancer Reputation
+          Your Reputation
         </h2>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
