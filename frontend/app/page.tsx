@@ -1,9 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Shield, Zap, Brain, ArrowRight, CheckCircle, Lock, Scale, Coins } from 'lucide-react';
+import { Shield, Zap, Brain, ArrowRight, CheckCircle, Lock, Scale, Coins, ChevronDown, Play, X } from 'lucide-react';
 import { useGetAllJobs } from '@/hooks/useArbiqContract';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
@@ -62,6 +63,62 @@ const steps = [
   { n: '05', title: 'Funds Settle',        desc: 'Approved? GEN transfers automatically. Disputed? Funds stay locked until resolved.' },
 ];
 
+const comparisonRows = [
+  {
+    feature: 'Payment protection',
+    traditional: 'Manual dispute + customer support',
+    arbiq: 'AI consensus, enforced on-chain',
+  },
+  {
+    feature: 'Platform fee',
+    traditional: '5–20%',
+    arbiq: '0%',
+  },
+  {
+    feature: 'Dispute resolution',
+    traditional: 'Days to weeks, outcome uncertain',
+    arbiq: 'Minutes, deterministic AI verdict',
+  },
+  {
+    feature: 'Trust required',
+    traditional: 'High (platform goodwill)',
+    arbiq: 'None — contract enforces both sides',
+  },
+  {
+    feature: 'Work evidence',
+    traditional: 'Screenshots, emails',
+    arbiq: 'On-chain immutable record',
+  },
+  {
+    feature: 'Payout speed',
+    traditional: '7–14 days',
+    arbiq: 'Instant on approval',
+  },
+];
+
+const faqs = [
+  {
+    q: 'What if the AI makes the wrong call?',
+    a: 'The AI uses strict consensus: all 7 validators must independently agree. If they don\'t, the transaction doesn\'t finalize. Additionally, the evidence URL and job description are both evaluated — write detailed specs to reduce misjudgment risk.',
+  },
+  {
+    q: 'Can the client take the money back?',
+    a: 'No. Once a job is posted, the GEN is locked in the smart contract. The client cannot withdraw it outside the defined state machine (AI approval or manual release after delivery).',
+  },
+  {
+    q: 'Is this real money?',
+    a: 'Arbiq runs on GenLayer Bradbury Testnet. GEN tokens have no real monetary value. This is an experimental dApp for testing AI-enforced freelance contracts.',
+  },
+  {
+    q: 'What kinds of work can I post?',
+    a: 'Anything with a verifiable digital deliverable: web dev, smart contracts, design, writing, video, APIs. Work that can\'t be submitted as a URL or document isn\'t a good fit.',
+  },
+  {
+    q: 'How long does AI evaluation take?',
+    a: 'Typically 1–5 minutes. Each validator independently calls an LLM and they must all agree before the transaction finalizes.',
+  },
+];
+
 function LiveStats() {
   const { data: jobs = [] } = useGetAllJobs();
   const total     = useCountUp(jobs.length, 800);
@@ -93,9 +150,39 @@ function LiveStats() {
   );
 }
 
+function FAQItem({ q, a, isOpen, onToggle }: { q: string; a: string; isOpen: boolean; onToggle: () => void }) {
+  return (
+    <div
+      className="rounded-2xl overflow-hidden transition-all duration-300"
+      style={{
+        background: 'var(--glass-bg)',
+        border: isOpen ? '1px solid rgba(124,58,237,0.40)' : '1px solid var(--border-subtle)',
+        boxShadow: isOpen ? '0 0 0 1px rgba(124,58,237,0.12)' : 'none',
+      }}
+    >
+      <button
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
+        onClick={onToggle}
+      >
+        <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}>{q}</span>
+        <ChevronDown
+          className="w-4 h-4 flex-shrink-0 transition-transform duration-300"
+          style={{ color: '#a78bfa', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+      {isOpen && (
+        <div className="px-6 pb-5">
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>{a}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const featuresRef = useScrollReveal<HTMLDivElement>(70);
   const stepsRef    = useScrollReveal<HTMLDivElement>(80);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
@@ -114,7 +201,6 @@ export default function HomePage() {
 
         <div className="absolute inset-0 hero-grain pointer-events-none" />
 
-        {/* Eyebrow */}
         <div
           className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-bold mb-12 anim-fade-in relative z-10"
           style={{
@@ -128,13 +214,31 @@ export default function HomePage() {
           POWERED BY GENLAYER AI CONSENSUS
         </div>
 
-        {/* Headline */}
-        <h1
-          className="display grad-text-hero mx-auto relative z-10 anim-fade-up"
+        {/* Headline with animated gradient border */}
+        <div
+          className="relative mx-auto anim-fade-up"
           style={{ animationDelay: '80ms', maxWidth: '900px' }}
         >
-          GET PAID.<br />OR GET PROOF.
-        </h1>
+          <div
+            className="absolute -inset-3 rounded-3xl pointer-events-none"
+            style={{
+              background: 'linear-gradient(120deg, rgba(124,58,237,0.55), rgba(99,102,241,0.35), rgba(167,139,250,0.55), rgba(124,58,237,0.35))',
+              backgroundSize: '300% 300%',
+              animation: 'gradientShift 5s ease infinite',
+              WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+              WebkitMaskComposite: 'xor',
+              maskComposite: 'exclude',
+              padding: '1.5px',
+              borderRadius: '24px',
+            }}
+          />
+          <h1
+            className="display grad-text-hero relative z-10"
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            GET PAID.<br />OR GET PROOF.
+          </h1>
+        </div>
 
         <p
           className="text-lg md:text-xl max-w-lg mx-auto mt-7 mb-10 leading-relaxed relative z-10 anim-fade-up"
@@ -144,7 +248,6 @@ export default function HomePage() {
           If the work ships, you get paid. No negotiation, no waiting, no disputes left open.
         </p>
 
-        {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center gap-3 relative z-10 anim-fade-up" style={{ animationDelay: '200ms' }}>
           <Link
             href="/jobs/new"
@@ -171,9 +274,18 @@ export default function HomePage() {
           >
             Find Work
           </Link>
+          <Link
+            href="#how-it-works"
+            className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200"
+            style={{ color: '#a78bfa' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#c4b5fd'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#a78bfa'; }}
+          >
+            <Play className="w-3.5 h-3.5" style={{ fill: 'currentColor' }} />
+            Watch how it works
+          </Link>
         </div>
 
-        {/* Trust strip */}
         <div
           className="flex flex-wrap items-center justify-center gap-6 mt-10 text-xs relative z-10 anim-fade-in"
           style={{ color: 'var(--text-muted)', animationDelay: '300ms', fontWeight: 600, letterSpacing: '0.05em' }}
@@ -207,6 +319,64 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* ─── COMPARISON TABLE ──────────────────────────────────────────── */}
+      <section className="py-28 px-4 relative">
+        <div className="orb orb-indigo absolute w-[450px] h-[450px] top-10 right-0 opacity-[0.06] pointer-events-none" />
+        <div className="max-w-5xl mx-auto relative z-10">
+          <div className="text-center mb-16">
+            <p className="label mb-3" style={{ color: '#7c3aed' }}>Honest comparison</p>
+            <h2 className="headline" style={{ color: 'var(--text-primary)' }}>Why not Upwork, Fiverr, or Escrow.com?</h2>
+            <p className="text-base mt-4 max-w-md mx-auto" style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+              Every traditional platform relies on human support staff and goodwill. Arbiq relies on code.
+            </p>
+          </div>
+
+          <div
+            className="rounded-3xl overflow-hidden"
+            style={{ background: 'var(--glass-bg)', border: '1px solid var(--border-subtle)' }}
+          >
+            {/* Table header */}
+            <div
+              className="grid grid-cols-3 px-6 py-4"
+              style={{ background: 'rgba(124,58,237,0.06)', borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              <div className="text-xs font-bold tracking-widest" style={{ color: 'var(--text-muted)', letterSpacing: '0.10em' }}>FEATURE</div>
+              <div className="text-xs font-bold tracking-widest text-center" style={{ color: '#ef4444', letterSpacing: '0.10em' }}>TRADITIONAL PLATFORMS</div>
+              <div
+                className="text-xs font-bold tracking-widest text-center"
+                style={{ color: '#a78bfa', letterSpacing: '0.10em' }}
+              >
+                ARBIQ
+              </div>
+            </div>
+
+            {/* Table rows */}
+            {comparisonRows.map(({ feature, traditional, arbiq }, i) => (
+              <div
+                key={feature}
+                className="grid grid-cols-3 items-center px-6 py-5 transition-colors duration-150"
+                style={{
+                  borderBottom: i < comparisonRows.length - 1 ? '1px solid var(--border-divider)' : 'none',
+                  background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.04)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'; }}
+              >
+                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{feature}</div>
+                <div className="flex items-center justify-center gap-2">
+                  <X className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ef4444' }} />
+                  <span className="text-sm text-center" style={{ color: '#9ca3af' }}>{traditional}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#22c55e' }} />
+                  <span className="text-sm font-medium text-center" style={{ color: '#c4b5fd' }}>{arbiq}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ─── FEATURES ──────────────────────────────────────────────────── */}
       <section className="py-32 px-4 relative">
@@ -274,7 +444,6 @@ export default function HomePage() {
                 the transaction finalizes — no single point of control or manipulation.
               </p>
 
-              {/* Sample verdict */}
               <div
                 className="rounded-2xl p-6"
                 style={{ background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', maxWidth: '520px' }}
@@ -304,7 +473,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── HOW IT WORKS ──────────────────────────────────────────────── */}
-      <section className="py-28 px-4">
+      <section id="how-it-works" className="py-28 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-16">
             <p className="label mb-3" style={{ color: '#7c3aed' }}>The flow</p>
@@ -338,6 +507,29 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FAQ ───────────────────────────────────────────────────────── */}
+      <section className="py-24 px-4 relative">
+        <div className="orb orb-violet absolute w-[400px] h-[400px] bottom-0 left-1/2 -translate-x-1/2 opacity-[0.06] pointer-events-none" />
+        <div className="max-w-2xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <p className="label mb-3" style={{ color: '#7c3aed' }}>FAQ</p>
+            <h2 className="headline" style={{ color: 'var(--text-primary)' }}>Common questions</h2>
+          </div>
+
+          <div className="space-y-3">
+            {faqs.map(({ q, a }, i) => (
+              <FAQItem
+                key={q}
+                q={q}
+                a={a}
+                isOpen={openFaq === i}
+                onToggle={() => setOpenFaq(openFaq === i ? null : i)}
+              />
+            ))}
           </div>
         </div>
       </section>

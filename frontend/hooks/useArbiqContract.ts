@@ -12,6 +12,11 @@ import type { Job } from "@/lib/types";
 import { useError } from "@/lib/error-context";
 import { friendlyError } from "@/lib/errors";
 
+// Set to true while any write tx is in-flight so read hooks pause their polling
+// and don't compete with the write for the shared testnet RPC rate limit.
+let txInFlight = false;
+export function setTxInFlight(v: boolean) { txInFlight = v; }
+
 function parseJobsJson(raw: unknown): Job[] {
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -41,8 +46,8 @@ export function useGetAllJobs() {
       const raw = await readContract("get_all_jobs");
       return parseJobsJson(raw);
     },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 30_000,
+    refetchInterval: () => txInFlight ? false : 60_000,
     retry: 2,
   });
 }
@@ -56,8 +61,8 @@ export function useGetJob(id: number | undefined) {
       return parseJobJson(raw);
     },
     enabled: id !== undefined,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 15_000,
+    refetchInterval: () => txInFlight ? false : 30_000,
   });
 }
 
@@ -77,7 +82,7 @@ export function useGetJobCount() {
   return useQuery({
     queryKey: ["arbiq", "jobCount"],
     queryFn: () => readContract("get_job_count"),
-    refetchInterval: 30_000,
+    refetchInterval: () => txInFlight ? false : 60_000,
   });
 }
 
@@ -125,11 +130,10 @@ function useContractWrite() {
     async (hash: TransactionHash, maxRetries: number) => {
       setTxState((s) => ({ ...s, status: "finalizing", consensusStatus: "PENDING" }));
 
-      // Poll getTransaction directly at 1s intervals instead of using the black-box
-      // waitForTransactionReceipt (which sleeps 3s between attempts with no live updates).
-      // This gives us real-time consensusStatus updates AND reaches decided state ~3x faster.
+      // Poll getTransaction at 2s intervals to stay within testnet rate limits
+      // while still giving near-real-time consensus status updates.
       for (let attempt = 0; attempt < maxRetries; attempt++) {
-        await new Promise((r) => setTimeout(r, 1_000));
+        await new Promise((r) => setTimeout(r, 2_000));
         try {
           const tx = await genLayerClient.getTransaction({ hash });
           const statusNum = String(tx.status);
@@ -148,6 +152,7 @@ function useContractWrite() {
                 returnValue = (lr[0] as Record<string, unknown>).result ?? null;
               }
             }
+            txInFlight = false;
             setTxState((s) => ({
               ...s,
               status: "finalized",
@@ -162,7 +167,8 @@ function useContractWrite() {
         }
       }
 
-      const timeoutMsg = `Timed out after ${maxRetries}s waiting for consensus`;
+      txInFlight = false;
+      const timeoutMsg = `Timed out after ${maxRetries * 2}s waiting for consensus`;
       setTxState((s) => ({ ...s, status: "error", error: timeoutMsg }));
       showError(new Error(timeoutMsg));
     },
@@ -174,8 +180,8 @@ function useContractWrite() {
       functionName,
       args,
       value,
-      // retries = max seconds to wait (1 poll/sec). 90s for deterministic, 300s for AI.
-      retries = 90,
+      // retries = max poll attempts (1 poll/2s). 60 attempts = ~120s for deterministic.
+      retries = 60,
     }: {
       functionName: string;
       args: CalldataEncodable[];
@@ -190,6 +196,7 @@ function useContractWrite() {
       }
 
       setTxState({ txHash: null, status: "pending", consensusStatus: null, returnValue: null, error: null });
+      txInFlight = true;
 
       try {
         // account must be a plain address STRING (not an object) so that genlayer-js
@@ -222,6 +229,7 @@ function useContractWrite() {
 
         return txHash;
       } catch (err: unknown) {
+        txInFlight = false;
         const msg = friendlyError(err);
         setTxState({ txHash: null, status: "error", consensusStatus: null, returnValue: null, error: msg });
         showError(err);
@@ -330,8 +338,8 @@ export function useAutoEvaluate() {
       send({
         functionName: "auto_evaluate",
         args: [jobId],
-        // AI evaluation needs more time for LLM inference across validator nodes
-        retries: 300,
+        // AI evaluation needs more time — 150 polls × 2s = ~5 min
+        retries: 150,
       }),
     [send]
   );
@@ -386,8 +394,8 @@ export function useGetMessages(jobId: number | undefined) {
       }
     },
     enabled: jobId !== undefined,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 30_000,
+    refetchInterval: () => txInFlight ? false : 45_000,
   });
 }
 

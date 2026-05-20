@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useGetMessages, useSendMessage, type ChatMessage } from "@/hooks/useArbiqContract";
 import { Send, MessageSquare, Loader2, Lock } from "lucide-react";
 
@@ -42,7 +41,6 @@ function shouldShowDateDivider(msgs: ChatMessage[], index: number): boolean {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function JobChat({ jobId, address, clientAddress, freelancerAddress: _ }: Props) {
-  const queryClient = useQueryClient();
   const { data: messages = [], isLoading } = useGetMessages(jobId);
   const { sendMessage, txState, reset } = useSendMessage();
 
@@ -63,14 +61,25 @@ export function JobChat({ jobId, address, clientAddress, freelancerAddress: _ }:
     ),
   ];
 
-  // Clear optimistic once confirmed messages catch up
+  // Once tx finalizes, reset state. Keep optimistic msgs until confirmed msgs catch up.
   useEffect(() => {
     if (txState.status === "finalized") {
+      reset();
+    }
+    if (txState.status === "error") {
       setOptimisticMsgs([]);
       reset();
-      queryClient.invalidateQueries({ queryKey: ["arbiq", "messages", jobId] });
     }
-  }, [txState.status, reset, queryClient, jobId]);
+  }, [txState.status, reset]);
+
+  // Drop optimistic messages once the confirmed list contains them
+  useEffect(() => {
+    if (optimisticMsgs.length === 0) return;
+    const allConfirmed = optimisticMsgs.every((o) =>
+      messages.some((m) => m.sender === o.sender && m.content === o.content)
+    );
+    if (allConfirmed) setOptimisticMsgs([]);
+  }, [messages, optimisticMsgs]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -255,6 +264,20 @@ export function JobChat({ jobId, address, clientAddress, freelancerAddress: _ }:
         )}
         <div ref={bottomRef} />
       </div>
+
+      {/* Error banner */}
+      {txState.status === "error" && txState.error && (
+        <div
+          className="px-4 py-2 text-xs font-medium"
+          style={{
+            background: "rgba(239,68,68,0.08)",
+            borderTop: "1px solid rgba(239,68,68,0.18)",
+            color: "#f87171",
+          }}
+        >
+          {txState.error}
+        </div>
+      )}
 
       {/* Input area */}
       <form

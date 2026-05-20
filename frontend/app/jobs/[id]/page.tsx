@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect, useCallback, FormEvent } from 'react';
+import { use, useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { StatusBadge } from '@/components/ui/badge';
@@ -85,8 +85,32 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     return (
       <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
         <Navbar />
-        <main className="pt-32 text-center">
-          <p style={{ color: 'var(--text-muted)' }}>Job #{jobId} not found.</p>
+        <main className="pt-32 flex flex-col items-center justify-center px-4 text-center">
+          <AlertCircle
+            className="w-16 h-16 mb-5"
+            style={{ color: 'rgba(167,139,250,0.45)' }}
+          />
+          <h2
+            className="text-xl font-bold mb-2"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            Job not found
+          </h2>
+          <p className="text-sm mb-8" style={{ color: 'var(--text-muted)' }}>
+            Job #{jobId} doesn&apos;t exist on this network.
+          </p>
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            style={{
+              background: 'var(--surface-raised)',
+              border: '1px solid var(--border-mid)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Jobs
+          </Link>
         </main>
       </div>
     );
@@ -94,7 +118,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const isClient = address?.toLowerCase() === job.client.toLowerCase();
   const isFreelancer = job.freelancer && address?.toLowerCase() === job.freelancer.toLowerCase();
 
-  const handleDeliver = (e: FormEvent) => {
+  const handleDeliver = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!evidenceUrl.trim()) {
       toast.error('Evidence URL is required');
@@ -102,6 +126,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     }
     submitDelivery(jobId, evidenceUrl, evidenceNote);
   };
+
+  // Compute days since posting
+  const daysAgoPosted = job.created_at
+    ? Math.max(0, Math.floor((Date.now() - new Date(job.created_at).getTime()) / 86_400_000))
+    : null;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
@@ -136,7 +165,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             >
               {job.title}
             </h1>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <StatusBadge status={job.status} />
               <ShareButton />
             </div>
@@ -206,9 +235,49 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           {job.status === 'open' && (
             <Section title={isClient ? 'Awaiting Freelancer' : 'Accept This Job'} accent="#38bdf8">
               {isClient ? (
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Your job is live. Waiting for a freelancer to accept.
-                </p>
+                <div className="space-y-4">
+                  {/* Pulsing waiting indicator */}
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span
+                        className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+                        style={{ background: '#38bdf8' }}
+                      />
+                      <span
+                        className="relative inline-flex rounded-full h-2.5 w-2.5"
+                        style={{ background: '#38bdf8' }}
+                      />
+                    </span>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                      Waiting for freelancer
+                    </p>
+                  </div>
+
+                  {daysAgoPosted !== null && (
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      Posted{' '}
+                      {daysAgoPosted === 0
+                        ? 'today'
+                        : daysAgoPosted === 1
+                        ? '1 day ago'
+                        : `${daysAgoPosted} days ago`}
+                    </p>
+                  )}
+
+                  {/* Share nudge */}
+                  <div
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl"
+                    style={{
+                      background: 'rgba(56,189,248,0.06)',
+                      border: '1px solid rgba(56,189,248,0.15)',
+                    }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      Share this job to find a freelancer faster →
+                    </p>
+                    <ShareButton compact />
+                  </div>
+                </div>
               ) : isConnected ? (
                 <div className="space-y-3">
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -321,7 +390,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     (e.currentTarget as HTMLElement).style.color = '#fdba74';
                   }}
                 >
-                  <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                  <ExternalLink className="w-4 h-4 shrink-0" />
                   {job.evidence_url}
                 </a>
                 {job.evidence_note && (
@@ -368,6 +437,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         loadingLabel="AI Validators reviewing…"
                         icon={<Brain className="w-4 h-4" />}
                       />
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        Typical evaluation time: 1–5 minutes. You&apos;ll see live validator
+                        progress below.
+                      </p>
                       <ConsensusTxStatus
                         status={evalState.status}
                         txHash={evalState.txHash}
@@ -442,7 +515,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     className="flex items-center gap-3 text-sm"
                     style={{ color: 'var(--text-secondary)' }}
                   >
-                    <Clock className="w-5 h-5 text-orange-400 flex-shrink-0" />
+                    <Clock className="w-5 h-5 text-orange-400 shrink-0" />
                     Delivery submitted. The client can approve or trigger AI evaluation.
                   </div>
                 </Section>
@@ -463,8 +536,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             >
               <div className="flex items-center gap-2 font-bold text-green-300">
                 <CheckCircle2 className="w-5 h-5" />
-                AI Approved — Funds Released
+                ✦ AI Approved — Funds Released
               </div>
+              <p className="text-xs" style={{ color: 'rgba(34,197,94,0.6)' }}>
+                Funds were transferred automatically on consensus.
+              </p>
               {job.ai_reasoning && (
                 <div className="pt-3" style={{ borderTop: '1px solid rgba(34,197,94,0.12)' }}>
                   <p
@@ -496,6 +572,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 <AlertCircle className="w-5 h-5" />
                 AI Rejected — Disputed
               </div>
+              <p className="text-xs leading-relaxed" style={{ color: 'rgba(239,68,68,0.65)' }}>
+                The AI evaluated the evidence and found it insufficient for the job spec. Funds
+                remain locked. Re-evaluate with better evidence when available.
+              </p>
               {job.ai_reasoning && (
                 <div className="pt-3" style={{ borderTop: '1px solid rgba(239,68,68,0.12)' }}>
                   <p
@@ -600,7 +680,7 @@ function MetaItem({
   );
 }
 
-function ShareButton() {
+function ShareButton({ compact }: { compact?: boolean }) {
   const [shared, setShared] = useState(false);
   const share = useCallback(() => {
     const url = window.location.href;
@@ -613,6 +693,24 @@ function ShareButton() {
       });
     }
   }, []);
+
+  if (compact) {
+    return (
+      <button
+        onClick={share}
+        title="Share this job"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0"
+        style={{
+          background: 'rgba(56,189,248,0.1)',
+          border: '1px solid rgba(56,189,248,0.2)',
+          color: shared ? '#86efac' : '#7dd3fc',
+        }}
+      >
+        {shared ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+        {shared ? 'Copied!' : 'Share'}
+      </button>
+    );
+  }
 
   return (
     <button
@@ -641,13 +739,23 @@ function Section({
 }) {
   return (
     <div
-      className="p-6 rounded-2xl space-y-4"
+      className="p-6 md:p-7 rounded-2xl space-y-4 relative overflow-hidden"
       style={{
         background: 'var(--surface-card)',
         border: `1px solid ${accent ? `${accent}22` : 'var(--border-subtle)'}`,
       }}
     >
-      <h2 className="text-sm font-bold" style={{ color: accent ?? 'var(--text-label)' }}>
+      {/* Left border accent */}
+      {accent && (
+        <div
+          className="absolute left-0 top-0 bottom-0 rounded-l-2xl"
+          style={{ width: 3, background: accent, opacity: 0.7 }}
+        />
+      )}
+      <h2
+        className="text-[11px] font-bold uppercase tracking-widest"
+        style={{ color: accent ?? 'var(--text-label)' }}
+      >
         {title}
       </h2>
       {children}
