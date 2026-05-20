@@ -5,13 +5,6 @@ import json
 import re
 
 
-STATUS_OPEN = "open"
-STATUS_ACTIVE = "active"
-STATUS_DELIVERED = "delivered"
-STATUS_COMPLETED = "completed"
-STATUS_DISPUTED = "disputed"
-
-
 @gl.evm.contract_interface
 class _Recipient:
     class View:
@@ -20,21 +13,14 @@ class _Recipient:
         pass
 
 
-def _addr_to_u256(address: str) -> u256:
-    return u256(int(address.lower().replace("0x", ""), 16))
-
-
 class Arbiq(gl.Contract):
     job_count: u256
     jobs: TreeMap[u256, str]
     messages: TreeMap[u256, str]
-    profiles: TreeMap[u256, str]   # address-as-u256 → JSON profile
+    profiles: TreeMap[str, str]
 
     def __init__(self):
         self.job_count = u256(0)
-        self.jobs = TreeMap[u256, str]()
-        self.messages = TreeMap[u256, str]()
-        self.profiles = TreeMap[u256, str]()
 
     def _load_job(self, job_id: u256):
         raw = self.jobs.get(job_id, "")
@@ -46,11 +32,11 @@ class Arbiq(gl.Contract):
         self.jobs[job_id] = json.dumps(job)
 
     def _load_profile(self, address: str) -> dict:
-        key = _addr_to_u256(address)
+        key = address.lower()
         raw = self.profiles.get(key, "")
         if not raw:
             return {
-                "address": address.lower(),
+                "address": key,
                 "jobs_completed": 0,
                 "jobs_disputed": 0,
                 "total_earned": 0,
@@ -59,8 +45,7 @@ class Arbiq(gl.Contract):
         return json.loads(raw)
 
     def _save_profile(self, address: str, profile: dict) -> None:
-        key = _addr_to_u256(address)
-        self.profiles[key] = json.dumps(profile)
+        self.profiles[address.lower()] = json.dumps(profile)
 
     def _update_freelancer_profile(self, freelancer: str, budget: int, disputed: bool) -> None:
         p = self._load_profile(freelancer)
@@ -96,7 +81,7 @@ class Arbiq(gl.Contract):
             "deadline": deadline,
             "client": gl.message.sender_address.as_hex,
             "freelancer": "",
-            "status": STATUS_OPEN,
+            "status": "open",
             "evidence_url": "",
             "evidence_note": "",
             "ai_reasoning": "",
@@ -104,8 +89,8 @@ class Arbiq(gl.Contract):
             "ai_confidence": "",
             "resubmit_count": 0,
             "has_milestones": False,
-            "created_at": int(gl.message.timestamp),
-            "updated_at": int(gl.message.timestamp),
+            "created_at": 0,
+            "updated_at": 0,
         }
         self._save_job(job_id, job)
 
@@ -152,7 +137,7 @@ class Arbiq(gl.Contract):
             "deadline": deadline,
             "client": gl.message.sender_address.as_hex,
             "freelancer": "",
-            "status": STATUS_OPEN,
+            "status": "open",
             "evidence_url": "",
             "evidence_note": "",
             "ai_reasoning": "",
@@ -161,8 +146,8 @@ class Arbiq(gl.Contract):
             "resubmit_count": 0,
             "has_milestones": True,
             "milestones": milestones,
-            "created_at": int(gl.message.timestamp),
-            "updated_at": int(gl.message.timestamp),
+            "created_at": 0,
+            "updated_at": 0,
         }
         self._save_job(job_id, job)
 
@@ -170,21 +155,21 @@ class Arbiq(gl.Contract):
     def take_job(self, job_id: int) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-        if job["status"] != STATUS_OPEN:
+        if job["status"] != "open":
             raise gl.vm.UserError("Job is not open")
         caller = gl.message.sender_address.as_hex
         if caller == job["client"]:
             raise gl.vm.UserError("Client cannot take their own job")
         job["freelancer"] = caller
-        job["status"] = STATUS_ACTIVE
-        job["updated_at"] = int(gl.message.timestamp)
+        job["status"] = "active"
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
     def submit_delivery(self, job_id: int, evidence_url: str, evidence_note: str) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-        if job["status"] != STATUS_ACTIVE:
+        if job["status"] != "active":
             raise gl.vm.UserError("Job is not active")
         caller = gl.message.sender_address.as_hex
         if caller != job["freelancer"]:
@@ -193,8 +178,8 @@ class Arbiq(gl.Contract):
             raise gl.vm.UserError("Evidence URL is required")
         job["evidence_url"] = evidence_url.strip()
         job["evidence_note"] = evidence_note.strip() if evidence_note else ""
-        job["status"] = STATUS_DELIVERED
-        job["updated_at"] = int(gl.message.timestamp)
+        job["status"] = "delivered"
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -203,7 +188,7 @@ class Arbiq(gl.Contract):
         job = self._load_job(jid)
         if not job.get("has_milestones"):
             raise gl.vm.UserError("This job does not use milestones")
-        if job["status"] != STATUS_ACTIVE:
+        if job["status"] != "active":
             raise gl.vm.UserError("Job is not active")
         caller = gl.message.sender_address.as_hex
         if caller != job["freelancer"]:
@@ -219,7 +204,7 @@ class Arbiq(gl.Contract):
         m["evidence_url"] = evidence_url.strip()
         m["evidence_note"] = evidence_note.strip() if evidence_note else ""
         m["status"] = "delivered"
-        job["updated_at"] = int(gl.message.timestamp)
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -228,7 +213,7 @@ class Arbiq(gl.Contract):
         job = self._load_job(jid)
         if not job.get("has_milestones"):
             raise gl.vm.UserError("This job does not use milestones")
-        if job["status"] != STATUS_ACTIVE:
+        if job["status"] != "active":
             raise gl.vm.UserError("Job is not active")
         caller = gl.message.sender_address.as_hex
         if caller != job["client"]:
@@ -248,18 +233,18 @@ class Arbiq(gl.Contract):
 
         all_approved = all(ms["approved"] for ms in milestones)
         if all_approved:
-            job["status"] = STATUS_COMPLETED
+            job["status"] = "completed"
             job["ai_reasoning"] = "All milestones approved by client."
             self._update_freelancer_profile(job["freelancer"], int(job["budget"]), disputed=False)
 
-        job["updated_at"] = int(gl.message.timestamp)
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
     def auto_evaluate(self, job_id: int) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-        if job["status"] != STATUS_DELIVERED:
+        if job["status"] != "delivered":
             raise gl.vm.UserError("Job has not been delivered yet")
 
         title = job["title"]
@@ -337,8 +322,8 @@ This result must be perfectly parseable by a JSON parser without errors."""
         job["ai_reasoning"] = reasoning
         job["ai_scores"] = json.dumps(scores) if scores else "{}"
         job["ai_confidence"] = confidence
-        job["status"] = STATUS_COMPLETED if approved else STATUS_DISPUTED
-        job["updated_at"] = int(gl.message.timestamp)
+        job["status"] = "completed" if approved else "disputed"
+        job["updated_at"] = 0
 
         if approved:
             _Recipient(Address(freelancer_hex)).emit_transfer(value=budget)
@@ -350,15 +335,15 @@ This result must be perfectly parseable by a JSON parser without errors."""
     def release_manually(self, job_id: int) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-        if job["status"] != STATUS_DELIVERED:
+        if job["status"] != "delivered":
             raise gl.vm.UserError("Job has not been delivered yet")
         caller = gl.message.sender_address.as_hex
         if caller != job["client"]:
             raise gl.vm.UserError("Only the client can manually release payment")
         _Recipient(Address(job["freelancer"])).emit_transfer(value=job["budget"])
-        job["status"] = STATUS_COMPLETED
+        job["status"] = "completed"
         job["ai_reasoning"] = "Manually approved by client."
-        job["updated_at"] = int(gl.message.timestamp)
+        job["updated_at"] = 0
         self._save_job(jid, job)
         self._update_freelancer_profile(job["freelancer"], int(job["budget"]), disputed=False)
 
@@ -366,7 +351,7 @@ This result must be perfectly parseable by a JSON parser without errors."""
     def resubmit_delivery(self, job_id: int, evidence_url: str, evidence_note: str) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-        if job["status"] != STATUS_DISPUTED:
+        if job["status"] != "disputed":
             raise gl.vm.UserError("Job is not in disputed state")
         caller = gl.message.sender_address.as_hex
         if caller != job["freelancer"]:
@@ -378,19 +363,19 @@ This result must be perfectly parseable by a JSON parser without errors."""
             raise gl.vm.UserError("Maximum resubmits (2) reached")
         job["evidence_url"] = evidence_url.strip()
         job["evidence_note"] = evidence_note.strip() if evidence_note else ""
-        job["status"] = STATUS_DELIVERED
+        job["status"] = "delivered"
         job["resubmit_count"] = count + 1
         job["ai_reasoning"] = ""
         job["ai_scores"] = "{}"
         job["ai_confidence"] = ""
-        job["updated_at"] = int(gl.message.timestamp)
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
     def send_message(self, job_id: int, content: str) -> None:
         jid = u256(job_id)
         job = self._load_job(jid)
-        if job["status"] == STATUS_OPEN:
+        if job["status"] == "open":
             raise gl.vm.UserError("Cannot message before a freelancer takes the job")
         sender = gl.message.sender_address.as_hex
         if sender != job["client"] and sender != job["freelancer"]:
@@ -400,7 +385,7 @@ This result must be perfectly parseable by a JSON parser without errors."""
             "sender": sender,
             "content": content[:500],
             "role": "client" if sender == job["client"] else "freelancer",
-            "timestamp": int(gl.message.timestamp),
+            "timestamp": 0,
         })
         self.messages[jid] = json.dumps(msgs)
 
@@ -449,14 +434,4 @@ This result must be perfectly parseable by a JSON parser without errors."""
 
     @gl.public.view
     def get_profile(self, address: str) -> str:
-        key = _addr_to_u256(address)
-        raw = self.profiles.get(key, "")
-        if not raw:
-            return json.dumps({
-                "address": address.lower(),
-                "jobs_completed": 0,
-                "jobs_disputed": 0,
-                "total_earned": 0,
-                "reputation_score": 100,
-            })
-        return raw
+        return json.dumps(self._load_profile(address))

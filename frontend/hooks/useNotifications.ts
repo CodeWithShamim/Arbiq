@@ -200,7 +200,7 @@ export function useNotifications() {
     };
 
     poll();
-    const interval = setInterval(poll, 30_000);
+    const interval = setInterval(poll, 45_000);
     return () => clearInterval(interval);
   }, [address, addNotification]);
 

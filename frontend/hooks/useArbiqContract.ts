@@ -68,8 +68,8 @@ export function useGetJob(id: number | undefined) {
       return parseJobJson(raw);
     },
     enabled: id !== undefined,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -401,8 +401,8 @@ export function useGetMessages(jobId: number | undefined) {
       }
     },
     enabled: jobId !== undefined,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
   });
 }
 
