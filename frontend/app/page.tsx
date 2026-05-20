@@ -8,64 +8,60 @@ import { useGetAllJobs } from '@/hooks/useArbiqContract';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
-/* ── Marquee tech strip ─────────────────────────────────────────────────── */
 const TECH_TAGS = [
-  'GenLayer Consensus', 'AI Enforcement', 'Trustless Escrow', 'On-chain Verdicts',
-  'ZK Proofs', 'Immutable Contracts', 'Instant Payouts', 'No Middlemen',
-  'GenLayer Consensus', 'AI Enforcement', 'Trustless Escrow', 'On-chain Verdicts',
-  'ZK Proofs', 'Immutable Contracts', 'Instant Payouts', 'No Middlemen',
+  'GenLayer Consensus', 'Zero Platform Fees', 'Trustless Escrow', 'On-chain Verdicts',
+  'AI Arbitration', 'Immutable Contracts', 'Instant Payouts', 'No Middlemen',
+  'GenLayer Consensus', 'Zero Platform Fees', 'Trustless Escrow', 'On-chain Verdicts',
+  'AI Arbitration', 'Immutable Contracts', 'Instant Payouts', 'No Middlemen',
 ];
 
-/* ── Feature cards ──────────────────────────────────────────────────────── */
 const features = [
   {
     icon: Lock,
-    title: 'Escrow Protection',
-    body: 'Client funds lock on-chain at job creation. Released only after AI renders verdict.',
+    title: 'Escrow at Post Time',
+    body: "Client funds lock the moment a job is created — not when you shake hands. The contract holds GEN until work is verified.",
     accent: '#7c3aed',
   },
   {
     icon: Brain,
-    title: 'AI Evaluation',
-    body: "GenLayer's consensus AI reads your spec and freelancer evidence, then decides impartially.",
+    title: 'AI Reads the Spec',
+    body: "Multiple GenLayer validators independently evaluate your job description against the submitted evidence. Consensus, not a coin flip.",
     accent: '#38bdf8',
   },
   {
     icon: Zap,
-    title: 'Instant Payout',
-    body: 'On approval, GEN transfers automatically. No delay, no human intermediary.',
+    title: 'Automatic Settlement',
+    body: 'Approved work triggers an immediate on-chain transfer. No invoice chasing, no payment delays, no excuses.',
     accent: '#22c55e',
   },
   {
     icon: Scale,
-    title: 'Dispute Resolution',
-    body: 'Every dispute is settled by decentralized AI consensus — not a single arbiter.',
+    title: 'Decentralized Disputes',
+    body: 'No single arbiter can be bribed or pressured. Every contested job is settled by AI validator consensus.',
     accent: '#f59e0b',
   },
   {
     icon: Shield,
-    title: 'Trustless by Design',
-    body: 'Smart contracts enforce every rule. Neither party can cheat or withdraw early.',
+    title: 'Neither Side Can Cheat',
+    body: "Clients can't pull funds early. Freelancers can't claim payment without delivering. The contract enforces both sides.",
     accent: '#ec4899',
   },
   {
     icon: Coins,
-    title: 'No Platform Fees',
-    body: 'Zero cut. Every GEN you earn goes directly to your wallet.',
+    title: '0% Platform Cut',
+    body: 'What you earn is what you keep. Every GEN you make goes straight to your wallet — nothing skimmed off the top.',
     accent: '#fb923c',
   },
 ];
 
-/* ── How it works steps ─────────────────────────────────────────────────── */
 const steps = [
-  { n: '01', title: 'Post a Job',          desc: 'Describe what you need in plain language. Set a GEN budget — it locks in escrow immediately.' },
-  { n: '02', title: 'Freelancer Accepts',  desc: 'Any connected wallet can browse open jobs and claim one with a single click.' },
-  { n: '03', title: 'Work & Deliver',      desc: 'Freelancer submits a GitHub link, live URL, or any evidence proving the work is done.' },
-  { n: '04', title: 'AI Judges',           desc: "GenLayer's validator network reads the spec + evidence and reaches on-chain consensus." },
-  { n: '05', title: 'Funds Released',      desc: 'Approved? GEN flows instantly. Disputed? Funds are held pending appeal.' },
+  { n: '01', title: 'Post a Job',          desc: 'Describe what you need in plain language. Set a GEN budget — it locks in escrow immediately on transaction confirmation.' },
+  { n: '02', title: 'Freelancer Accepts',  desc: 'Any wallet can browse open jobs and claim one. Once taken, the job moves to Active and messaging opens between both parties.' },
+  { n: '03', title: 'Work & Deliver',      desc: 'Freelancer submits a GitHub link, live URL, Loom, Figma — any evidence that proves the work exists.' },
+  { n: '04', title: 'AI Evaluates',        desc: "GenLayer validators each run the same LLM prompt against your spec and evidence, then compare results until they agree." },
+  { n: '05', title: 'Funds Settle',        desc: 'Approved? GEN transfers automatically. Disputed? Funds stay locked until resolved.' },
 ];
 
-/* ── Live chain stats ───────────────────────────────────────────────────── */
 function LiveStats() {
   const { data: jobs = [] } = useGetAllJobs();
   const total     = useCountUp(jobs.length, 800);
@@ -79,8 +75,8 @@ function LiveStats() {
   ];
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-10 mt-14 relative z-10 anim-fade-in" style={{ animationDelay: '400ms' }}>
-      {stats.map(({ value, label, color }, i) => (
+    <div className="flex flex-wrap items-center justify-center gap-12 mt-16 relative z-10 anim-fade-in" style={{ animationDelay: '400ms' }}>
+      {stats.map(({ value, label, color }) => (
         <div key={label} className="text-center">
           <div
             className="font-display text-5xl tabular-nums"
@@ -88,7 +84,7 @@ function LiveStats() {
           >
             {value}
           </div>
-          <div className="text-sm font-semibold mt-1" style={{ color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+          <div className="text-xs font-bold mt-1.5 tracking-widest" style={{ color: 'var(--text-muted)', letterSpacing: '0.10em' }}>
             {label.toUpperCase()}
           </div>
         </div>
@@ -97,7 +93,6 @@ function LiveStats() {
   );
 }
 
-/* ── Page ───────────────────────────────────────────────────────────────── */
 export default function HomePage() {
   const featuresRef = useScrollReveal<HTMLDivElement>(70);
   const stepsRef    = useScrollReveal<HTMLDivElement>(80);
@@ -107,50 +102,46 @@ export default function HomePage() {
       <Navbar />
 
       {/* ─── HERO ──────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center pt-40 pb-28 px-4 text-center overflow-hidden">
-        {/* Dot grid */}
+      <section className="relative flex flex-col items-center justify-center pt-44 pb-32 px-4 text-center overflow-hidden">
         <div className="dot-grid" />
 
-        {/* Floating orbs */}
         <div
-          className="orb orb-violet absolute w-[600px] h-[600px] -top-32 left-1/2 -translate-x-1/2 opacity-50 anim-orb-float"
+          className="orb orb-violet absolute w-[700px] h-[700px] -top-40 left-1/2 -translate-x-1/2 opacity-40 anim-orb-float"
           style={{ animationDuration: '14s' }}
         />
-        <div className="orb orb-indigo absolute w-[360px] h-[360px] top-64 -left-40 opacity-30 anim-orb-float" style={{ animationDelay: '4s', animationDuration: '18s' }} />
-        <div className="orb orb-pink   absolute w-[300px] h-[300px] top-80 -right-24 opacity-25 anim-orb-float" style={{ animationDelay: '8s', animationDuration: '16s' }} />
+        <div className="orb orb-indigo absolute w-[380px] h-[380px] top-72 -left-40 opacity-25 anim-orb-float" style={{ animationDelay: '4s', animationDuration: '18s' }} />
+        <div className="orb orb-pink   absolute w-[280px] h-[280px] top-80 -right-20 opacity-20 anim-orb-float" style={{ animationDelay: '8s', animationDuration: '16s' }} />
 
-        {/* Grain overlay */}
         <div className="absolute inset-0 hero-grain pointer-events-none" />
 
-        {/* Eyebrow pill */}
+        {/* Eyebrow */}
         <div
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-10 anim-fade-in relative z-10"
+          className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-bold mb-12 anim-fade-in relative z-10"
           style={{
-            background: 'rgba(124,58,237,0.10)',
-            border: '1px solid rgba(124,58,237,0.28)',
+            background: 'rgba(124,58,237,0.08)',
+            border: '1px solid rgba(124,58,237,0.24)',
             color: '#c4b5fd',
             letterSpacing: '0.10em',
-            textTransform: 'uppercase',
           }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#a78bfa', boxShadow: '0 0 8px #a78bfa', animation: 'brandPulse 2s ease-in-out infinite' }} />
-          Powered by GenLayer AI Consensus
+          POWERED BY GENLAYER AI CONSENSUS
         </div>
 
-        {/* Headline — Bebas Neue display */}
+        {/* Headline */}
         <h1
-          className="display grad-text-hero mx-auto relative z-10 anim-fade-up whitespace-nowrap"
-          style={{ animationDelay: '80ms' }}
+          className="display grad-text-hero mx-auto relative z-10 anim-fade-up"
+          style={{ animationDelay: '80ms', maxWidth: '900px' }}
         >
-          FREELANCE JUSTICE.
+          GET PAID.<br />OR GET PROOF.
         </h1>
 
         <p
-          className="text-lg md:text-xl max-w-xl mx-auto mt-6 mb-10 leading-relaxed relative z-10 anim-fade-up"
+          className="text-lg md:text-xl max-w-lg mx-auto mt-7 mb-10 leading-relaxed relative z-10 anim-fade-up"
           style={{ color: 'var(--text-secondary)', animationDelay: '140ms', fontWeight: 500 }}
         >
-          Post jobs, earn crypto, and let an AI validator judge every delivery.
-          No middlemen. No unresolved disputes.
+          Arbiq locks client funds on-chain and uses AI to judge every delivery.
+          If the work ships, you get paid. No negotiation, no waiting, no disputes left open.
         </p>
 
         {/* CTAs */}
@@ -182,12 +173,12 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Trust pills */}
+        {/* Trust strip */}
         <div
-          className="flex flex-wrap items-center justify-center gap-5 mt-10 text-xs relative z-10 anim-fade-in"
-          style={{ color: 'var(--text-muted)', animationDelay: '300ms', fontWeight: 600, letterSpacing: '0.04em' }}
+          className="flex flex-wrap items-center justify-center gap-6 mt-10 text-xs relative z-10 anim-fade-in"
+          style={{ color: 'var(--text-muted)', animationDelay: '300ms', fontWeight: 600, letterSpacing: '0.05em' }}
         >
-          {['Trustless escrow', 'AI-enforced verdicts', 'On-chain transparency'].map((t) => (
+          {['Funds locked in escrow', 'AI-enforced verdicts', 'Fully on-chain'].map((t) => (
             <span key={t} className="flex items-center gap-1.5">
               <CheckCircle className="w-3.5 h-3.5" style={{ color: '#7c3aed' }} />
               {t.toUpperCase()}
@@ -195,39 +186,41 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Live stats */}
         <LiveStats />
       </section>
 
       {/* ─── MARQUEE ───────────────────────────────────────────────────── */}
       <div
-        className="overflow-hidden py-5 relative"
+        className="overflow-hidden py-4 relative"
         style={{ borderTop: '1px solid var(--border-divider)', borderBottom: '1px solid var(--border-divider)' }}
       >
         <div className="marquee-track">
           {TECH_TAGS.map((tag, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-3 px-6 text-sm font-bold flex-shrink-0"
-              style={{ color: i % 4 === 0 ? '#a78bfa' : i % 4 === 1 ? '#38bdf8' : i % 4 === 2 ? '#22c55e' : 'var(--text-muted)', letterSpacing: '0.08em' }}
+              className="inline-flex items-center gap-3 px-6 text-xs font-bold flex-shrink-0"
+              style={{ color: i % 4 === 0 ? '#a78bfa' : i % 4 === 1 ? '#38bdf8' : i % 4 === 2 ? '#22c55e' : 'var(--text-muted)', letterSpacing: '0.10em' }}
             >
               {tag}
-              <span className="text-[8px] opacity-40">◆</span>
+              <span className="opacity-30" style={{ fontSize: '7px' }}>◆</span>
             </span>
           ))}
         </div>
       </div>
 
       {/* ─── FEATURES ──────────────────────────────────────────────────── */}
-      <section className="py-28 px-4 relative">
-        <div className="orb orb-violet absolute w-[500px] h-[500px] top-10 left-1/2 -translate-x-1/2 opacity-10 pointer-events-none" />
+      <section className="py-32 px-4 relative">
+        <div className="orb orb-violet absolute w-[500px] h-[500px] top-10 left-1/2 -translate-x-1/2 opacity-[0.07] pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10">
-          <div className="text-center mb-16">
+          <div className="text-center mb-20">
             <p className="label mb-3" style={{ color: '#7c3aed' }}>How it protects you</p>
             <h2 className="headline" style={{ color: 'var(--text-primary)' }}>Built on trustless infrastructure</h2>
+            <p className="text-base mt-4 max-w-md mx-auto" style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+              Every rule is encoded in the contract. No one can override it — not us, not the client, not the freelancer.
+            </p>
           </div>
 
-          <div ref={featuresRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div ref={featuresRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {features.map(({ icon: Icon, title, body, accent }) => (
               <div
                 key={title}
@@ -236,15 +229,15 @@ export default function HomePage() {
               >
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-2xl"
-                  style={{ background: `radial-gradient(ellipse at top left, ${accent}18 0%, transparent 65%)` }}
+                  style={{ background: `radial-gradient(ellipse at top left, ${accent}14 0%, transparent 65%)` }}
                 />
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-5 relative z-10"
-                  style={{ background: `${accent}15`, border: `1px solid ${accent}28` }}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-5 relative z-10"
+                  style={{ background: `${accent}12`, border: `1px solid ${accent}24` }}
                 >
                   <Icon className="w-5 h-5" style={{ color: accent }} strokeWidth={1.8} />
                 </div>
-                <h3 className="font-bold mb-2 text-base relative z-10" style={{ color: 'var(--text-primary)' }}>{title}</h3>
+                <h3 className="font-bold mb-2.5 text-sm relative z-10 tracking-tight" style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}>{title}</h3>
                 <p className="text-sm leading-relaxed relative z-10" style={{ color: 'var(--text-muted)' }}>{body}</p>
               </div>
             ))}
@@ -257,32 +250,31 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto">
           <div
             className="rounded-3xl relative overflow-hidden"
-            style={{ border: '1px solid rgba(124,58,237,0.22)', background: 'linear-gradient(135deg,rgba(124,58,237,0.10) 0%,rgba(99,102,241,0.06) 100%)' }}
+            style={{ border: '1px solid rgba(124,58,237,0.20)', background: 'linear-gradient(135deg,rgba(124,58,237,0.08) 0%,rgba(99,102,241,0.04) 100%)' }}
           >
-            <div className="orb orb-violet absolute w-96 h-96 -top-24 right-0 opacity-30 pointer-events-none" />
+            <div className="orb orb-violet absolute w-96 h-96 -top-24 right-0 opacity-25 pointer-events-none" />
 
             <div className="relative z-10 p-8 md:p-12">
               <div className="flex items-center gap-3 mb-6">
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(124,58,237,0.18)', border: '1px solid rgba(124,58,237,0.3)' }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(124,58,237,0.16)', border: '1px solid rgba(124,58,237,0.28)' }}
                 >
-                  <Brain className="w-5 h-5" style={{ color: '#a78bfa' }} strokeWidth={1.8} />
+                  <Brain className="w-4.5 h-4.5" style={{ color: '#a78bfa' }} strokeWidth={1.8} />
                 </div>
-                <div>
-                  <p className="label" style={{ color: '#7c3aed' }}>AI Verdict System</p>
-                </div>
+                <span className="label" style={{ color: '#7c3aed' }}>AI Verdict Engine</span>
               </div>
 
-              <h2 className="headline mb-4" style={{ color: 'var(--text-primary)' }}>
-                Every dispute resolved by consensus AI
+              <h2 className="headline mb-4" style={{ color: 'var(--text-primary)', maxWidth: '480px' }}>
+                Every dispute settled by validator consensus
               </h2>
-              <p className="text-base mb-8 leading-relaxed" style={{ color: 'var(--text-secondary)', maxWidth: '540px' }}>
-                GenLayer's validator network independently evaluates job specs, delivered work, and evidence.
-                Multiple validators reach consensus — no single point of failure or manipulation.
+              <p className="text-base mb-8 leading-relaxed" style={{ color: 'var(--text-secondary)', maxWidth: '520px' }}>
+                GenLayer runs multiple independent validators. Each one reads your job spec and the submitted
+                evidence, runs an LLM evaluation, then hashes the result. All hashes must match before
+                the transaction finalizes — no single point of control or manipulation.
               </p>
 
-              {/* Mock verdict card */}
+              {/* Sample verdict */}
               <div
                 className="rounded-2xl p-6"
                 style={{ background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', maxWidth: '520px' }}
@@ -291,19 +283,19 @@ export default function HomePage() {
                   <span className="label" style={{ color: 'var(--text-muted)' }}>Sample Verdict</span>
                   <span
                     className="pill"
-                    style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.28)', color: '#86efac' }}
+                    style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.24)', color: '#86efac' }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px #22c55e' }} />
                     APPROVED
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-                  "The delivered GitHub repository implements all 5 specified endpoints with tests covering edge cases.
-                  API documentation matches the job spec. Work is complete and satisfactory."
+                  "The submitted repository implements all five specified endpoints with passing test coverage.
+                  API documentation is present and matches the job spec. Work is complete."
                 </p>
                 <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
                   <span style={{ fontFamily: '"JetBrains Mono", monospace' }}>Consensus: 7/7 validators</span>
-                  <span>0.5 GEN released</span>
+                  <span style={{ fontFamily: '"JetBrains Mono", monospace' }}>1.0 GEN released</span>
                 </div>
               </div>
             </div>
@@ -312,7 +304,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── HOW IT WORKS ──────────────────────────────────────────────── */}
-      <section className="py-24 px-4">
+      <section className="py-28 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-16">
             <p className="label mb-3" style={{ color: '#7c3aed' }}>The flow</p>
@@ -322,7 +314,7 @@ export default function HomePage() {
           <div ref={stepsRef} className="relative">
             <div
               className="absolute left-[19px] top-10 bottom-10 w-px"
-              style={{ background: 'linear-gradient(to bottom, rgba(124,58,237,0.55), transparent)' }}
+              style={{ background: 'linear-gradient(to bottom, rgba(124,58,237,0.50), transparent)' }}
             />
             <div className="space-y-8">
               {steps.map(({ n, title, desc }, i) => (
@@ -332,15 +324,15 @@ export default function HomePage() {
                     style={{
                       background: i < 3
                         ? 'linear-gradient(135deg,#7c3aed,#a78bfa)'
-                        : 'rgba(124,58,237,0.14)',
-                      border: i >= 3 ? '1px solid rgba(124,58,237,0.28)' : 'none',
+                        : 'rgba(124,58,237,0.12)',
+                      border: i >= 3 ? '1px solid rgba(124,58,237,0.26)' : 'none',
                       color: i < 3 ? 'white' : '#a78bfa',
                     }}
                   >
                     {n}
                   </div>
-                  <div className="pt-1.5">
-                    <h4 className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>{title}</h4>
+                  <div className="pt-2">
+                    <h4 className="font-bold mb-1.5" style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}>{title}</h4>
                     <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>{desc}</p>
                   </div>
                 </div>
@@ -351,19 +343,20 @@ export default function HomePage() {
       </section>
 
       {/* ─── CTA BANNER ────────────────────────────────────────────────── */}
-      <section className="py-16 px-4 mb-8">
+      <section className="py-16 px-4 mb-10">
         <div className="max-w-3xl mx-auto">
           <div
             className="rounded-3xl p-10 md:p-14 text-center relative overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, rgba(124,58,237,0.14) 0%, rgba(99,102,241,0.07) 100%)',
-              border: '1px solid rgba(124,58,237,0.24)',
+              background: 'linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(99,102,241,0.06) 100%)',
+              border: '1px solid rgba(124,58,237,0.22)',
             }}
           >
-            <div className="orb orb-violet absolute w-80 h-80 -top-20 left-1/2 -translate-x-1/2 opacity-40 pointer-events-none" />
-            <h2 className="headline mb-4 relative z-10" style={{ color: 'var(--text-primary)' }}>Ready to work smarter?</h2>
-            <p className="text-base mb-8 relative z-10" style={{ color: 'var(--text-secondary)' }}>
-              Join Arbiq and let AI handle the trust layer.
+            <div className="orb orb-violet absolute w-80 h-80 -top-20 left-1/2 -translate-x-1/2 opacity-35 pointer-events-none" />
+            <p className="label mb-3 relative z-10" style={{ color: '#7c3aed' }}>Start now</p>
+            <h2 className="headline mb-4 relative z-10" style={{ color: 'var(--text-primary)' }}>Stop worrying about payment.</h2>
+            <p className="text-base mb-8 relative z-10 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+              The contract handles it. Post your first job or pick up open work — both sides are protected from the start.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 relative z-10">
               <Link

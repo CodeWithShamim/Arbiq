@@ -87,8 +87,8 @@ export function JobCard({ job }: { job: Job }) {
 
         {/* Title */}
         <h3
-          className="font-bold text-base leading-snug mb-2 line-clamp-2 relative z-10 transition-colors duration-200"
-          style={{ color: "var(--text-primary)" }}
+          className="font-bold leading-snug mb-2 line-clamp-2 relative z-10 transition-colors duration-200"
+          style={{ color: "var(--text-primary)", fontSize: "0.9375rem" }}
         >
           {job.title}
         </h3>
@@ -104,7 +104,7 @@ export function JobCard({ job }: { job: Job }) {
           <div className="flex items-center justify-between">
             <span
               className="text-sm font-bold"
-              style={{ color: "#a78bfa", fontFamily: '"JetBrains Mono", monospace' }}
+              style={{ color: "#a78bfa", fontFamily: '"JetBrains Mono", monospace', letterSpacing: "0.02em" }}
             >
               {formatBudget(job.budget)}
             </span>

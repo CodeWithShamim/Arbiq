@@ -9,7 +9,7 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 
 const navLinks = [
   { href: "/",           label: "Home"      },
-  { href: "/jobs",       label: "Browse"    },
+  { href: "/jobs",       label: "Jobs"      },
   { href: "/dashboard",  label: "Dashboard" },
   { href: "/analytics",  label: "Analytics" },
   { href: "/docs",       label: "Docs"      },
@@ -26,27 +26,34 @@ export function Navbar() {
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 h-[60px] flex items-center px-5 md:px-8"
+      className="fixed top-0 left-0 right-0 z-50 h-[62px] flex items-center px-5 md:px-8"
       style={{
         background: "var(--nav-bg)",
-        backdropFilter: "blur(24px) saturate(200%)",
-        WebkitBackdropFilter: "blur(24px) saturate(200%)",
+        backdropFilter: "blur(28px) saturate(200%)",
+        WebkitBackdropFilter: "blur(28px) saturate(200%)",
         borderBottom: "1px solid var(--nav-border)",
       }}
     >
       {/* Brand */}
-      <Link href="/" className="flex items-center gap-2 mr-6 flex-shrink-0 group">
-        <span
-          className="w-2 h-2 rounded-full"
+      <Link href="/" className="flex items-center gap-2.5 mr-8 flex-shrink-0 group">
+        {/* Logo mark */}
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center relative overflow-hidden"
           style={{
-            background: "#a78bfa",
-            boxShadow: "0 0 8px #a78bfa",
-            animation: "brandPulse 2s ease-in-out infinite",
+            background: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
+            boxShadow: '0 0 14px rgba(124,58,237,0.4)',
           }}
-        />
+        >
+          <span
+            className="font-display text-white text-sm"
+            style={{ letterSpacing: '0.01em', lineHeight: 1 }}
+          >
+            A
+          </span>
+        </div>
         <span
-          className="font-display text-xl tracking-widest"
-          style={{ color: "var(--text-primary)", letterSpacing: "0.14em" }}
+          className="font-display text-xl"
+          style={{ color: "var(--text-primary)", letterSpacing: "0.12em" }}
         >
           ARBIQ
         </span>
@@ -63,7 +70,7 @@ export function Navbar() {
             <Link
               key={href}
               href={href}
-              className="relative px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors duration-150"
+              className="relative px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors duration-150"
               style={{ color: active ? "#a78bfa" : "var(--text-muted)" }}
             >
               {active && (
@@ -71,9 +78,9 @@ export function Navbar() {
                   className="absolute inset-0 rounded-lg"
                   style={{
                     background: isLight
-                      ? "rgba(124,58,237,0.08)"
-                      : "rgba(124,58,237,0.14)",
-                    border: "1px solid rgba(124,58,237,0.22)",
+                      ? "rgba(124,58,237,0.07)"
+                      : "rgba(124,58,237,0.12)",
+                    border: "1px solid rgba(124,58,237,0.20)",
                   }}
                 />
               )}
@@ -88,11 +95,19 @@ export function Navbar() {
         {/* Post a Job shortcut */}
         <Link
           href="/jobs/new"
-          className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150"
+          className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all duration-150"
           style={{
-            background: isLight ? "rgba(124,58,237,0.08)" : "rgba(124,58,237,0.12)",
-            border: "1px solid rgba(124,58,237,0.22)",
+            background: isLight ? "rgba(124,58,237,0.07)" : "rgba(124,58,237,0.10)",
+            border: "1px solid rgba(124,58,237,0.20)",
             color: "#a78bfa",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = isLight ? "rgba(124,58,237,0.12)" : "rgba(124,58,237,0.18)";
+            (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.35)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = isLight ? "rgba(124,58,237,0.07)" : "rgba(124,58,237,0.10)";
+            (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.20)";
           }}
         >
           <PlusCircle className="w-3.5 h-3.5" />
@@ -108,12 +123,18 @@ export function Navbar() {
           aria-label="Toggle theme"
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200"
           style={{
-            background: isLight ? "rgba(109,40,217,0.07)" : "rgba(255,255,255,0.06)",
-            border: isLight ? "1px solid rgba(109,40,217,0.14)" : "1px solid rgba(255,255,255,0.09)",
+            background: isLight ? "rgba(109,40,217,0.06)" : "rgba(255,255,255,0.05)",
+            border: isLight ? "1px solid rgba(109,40,217,0.12)" : "1px solid rgba(255,255,255,0.08)",
             color: "var(--text-secondary)",
           }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = "#a78bfa";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+          }}
         >
-          {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          {isLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
         </button>
 
         {/* Wallet button */}
@@ -132,17 +153,17 @@ export function Navbar() {
                 {!connected ? (
                   <button
                     onClick={openConnectModal}
-                    className="btn-primary px-4 py-1.5 rounded-lg text-white text-sm font-bold"
+                    className="btn-primary px-4 py-1.5 rounded-lg text-white text-[13px] font-bold"
                   >
-                    Connect
+                    Connect Wallet
                   </button>
                 ) : chain.unsupported ? (
                   <button
                     onClick={openChainModal}
                     style={{
-                      background: "#ef4444",
-                      color: "white",
-                      border: "none",
+                      background: "rgba(239,68,68,0.12)",
+                      color: "#f87171",
+                      border: "1px solid rgba(239,68,68,0.24)",
                       borderRadius: 10,
                       padding: "6px 14px",
                       fontSize: 13,
@@ -157,8 +178,8 @@ export function Navbar() {
                     <button
                       onClick={openAccountModal}
                       style={{
-                        background: isLight ? "rgba(124,58,237,0.08)" : "rgba(124,58,237,0.14)",
-                        border: "1px solid rgba(124,58,237,0.28)",
+                        background: isLight ? "rgba(124,58,237,0.07)" : "rgba(124,58,237,0.12)",
+                        border: "1px solid rgba(124,58,237,0.24)",
                         color: isLight ? "#6d28d9" : "#c4b5fd",
                         borderRadius: 10,
                         padding: "5px 12px",
@@ -172,14 +193,14 @@ export function Navbar() {
                       }}
                     >
                       {account.ensName ?? truncate(account.address)}
-                      <ChevronDown className="w-3 h-3" style={{ opacity: 0.6 }} />
+                      <ChevronDown className="w-3 h-3" style={{ opacity: 0.5 }} />
                     </button>
                     <button
                       onClick={openAccountModal}
                       title="Disconnect wallet"
                       style={{
-                        background: isLight ? "rgba(239,68,68,0.07)" : "rgba(239,68,68,0.12)",
-                        border: "1px solid rgba(239,68,68,0.22)",
+                        background: isLight ? "rgba(239,68,68,0.06)" : "rgba(239,68,68,0.10)",
+                        border: "1px solid rgba(239,68,68,0.20)",
                         color: "#ef4444",
                         borderRadius: 10,
                         padding: "5px 9px",

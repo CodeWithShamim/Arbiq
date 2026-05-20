@@ -364,15 +364,18 @@ export default function AnalyticsPage() {
         <div className="orb orb-indigo absolute w-64 h-64 top-0 -left-20 opacity-10 pointer-events-none" />
 
         <div className="max-w-6xl mx-auto relative z-10">
-          <p className="label mb-3" style={{ color: "#7c3aed" }}>On-chain data</p>
+          <p className="label mb-3" style={{ color: "#7c3aed" }}>Live on-chain data</p>
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
               <h1 className="font-display text-6xl" style={{ color: "var(--text-primary)", letterSpacing: "0.04em" }}>
                 ANALYTICS
               </h1>
+              <p className="text-sm mt-2 font-medium" style={{ color: "var(--text-muted)" }}>
+                Volume, verdicts, and job activity — sourced directly from the contract.
+              </p>
               {noTimestamp > 0 && (
-                <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)", fontFamily: '"JetBrains Mono"' }}>
-                  {withTimestamp}/{allJobs.length} jobs have timestamps · {noTimestamp} pre-update job{noTimestamp !== 1 ? "s" : ""} shown in ALL view only
+                <p className="text-[11px] mt-1.5" style={{ color: "var(--text-muted)", fontFamily: '"JetBrains Mono"', opacity: 0.7 }}>
+                  {withTimestamp}/{allJobs.length} jobs have timestamps · {noTimestamp} pre-update job{noTimestamp !== 1 ? "s" : ""} appear in ALL view only
                 </p>
               )}
             </div>

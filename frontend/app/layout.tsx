@@ -7,9 +7,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ErrorProvider } from "@/lib/error-context";
 
 export const metadata: Metadata = {
-  title: "Arbiq — AI-Enforced Freelance Contracts",
+  title: "Arbiq — Trustless Freelance on GenLayer",
   description:
-    "Post jobs, earn crypto, and let AI enforce your freelance contracts on GenLayer.",
+    "The first freelance marketplace where payment is enforced by AI consensus, not promises. Post work, get paid in GEN — no middlemen, no disputes left unresolved.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

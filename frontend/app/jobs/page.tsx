@@ -56,16 +56,16 @@ export default function BrowseJobsPage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
             <div>
               <p className="label mb-2" style={{ color: '#7c3aed' }}>
-                Marketplace
+                Open Marketplace
               </p>
               <h1
                 className="font-display text-5xl"
                 style={{ color: 'var(--text-primary)', letterSpacing: '0.04em' }}
               >
-                BROWSE JOBS
+                FIND WORK
               </h1>
               <p className="text-sm mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
-                {allJobs.length} job{allJobs.length !== 1 ? 's' : ''} posted on-chain
+                {allJobs.length} job{allJobs.length !== 1 ? 's' : ''} live on-chain — pick one up, deliver the work, get paid automatically.
               </p>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
@@ -196,26 +196,26 @@ export default function BrowseJobsPage() {
                 ) : allJobs.length === 0 ? (
                   <>
                     <p className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                      No jobs on-chain yet
+                      The marketplace is empty
                     </p>
                     <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                      Be the first to post a job!
+                      Be the first to post work — someone will pick it up.
                     </p>
                     <Link
                       href="/jobs/new"
                       className="inline-block text-sm font-bold transition-colors"
                       style={{ color: '#7c3aed' }}
                     >
-                      Post a job →
+                      Post the first job →
                     </Link>
                   </>
                 ) : (
                   <>
                     <p className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                      No jobs match your filters
+                      Nothing matches those filters
                     </p>
                     <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                      Try adjusting or clearing your filters.
+                      Widen the budget range, change the status, or clear everything.
                     </p>
                     <button
                       onClick={clearFilters}

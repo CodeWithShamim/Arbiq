@@ -73,12 +73,12 @@ Requirements:
         <div className="dot-grid opacity-30" style={{ bottom: 'auto', height: '100%' }} />
         <div className="orb orb-violet absolute w-80 h-80 -top-20 right-10 opacity-25 pointer-events-none" />
         <div className="max-w-2xl mx-auto relative z-10">
-          <p className="label mb-3" style={{ color: "#7c3aed" }}>Create</p>
+          <p className="label mb-3" style={{ color: "#7c3aed" }}>Post work</p>
           <h1 className="font-display text-5xl" style={{ color: 'var(--text-primary)', letterSpacing: '0.04em' }}>
             POST A JOB
           </h1>
           <p className="text-sm mt-2 font-medium" style={{ color: "var(--text-muted)" }}>
-            Your budget locks in escrow instantly. AI reads your description to judge deliveries.
+            Write a clear spec — the AI evaluates deliveries against it word for word. Budget locks in escrow on submit.
           </p>
         </div>
       </div>

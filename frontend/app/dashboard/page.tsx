@@ -33,10 +33,13 @@ export default function DashboardPage() {
             className="font-display text-5xl mb-3"
             style={{ color: "var(--text-primary)", letterSpacing: "0.04em" }}
           >
-            CONNECT
+            YOUR DASHBOARD
           </h1>
-          <p className="text-sm mb-8 max-w-xs font-medium" style={{ color: "var(--text-muted)" }}>
-            Connect your wallet to view posted jobs, active work, and earnings.
+          <p className="text-sm mb-2 max-w-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+            Connect your wallet to see the jobs you've posted, work in progress, and payment history.
+          </p>
+          <p className="text-xs mb-8 max-w-xs" style={{ color: "var(--text-muted)" }}>
+            Read-only browsing doesn't require a wallet — only posting, taking, or evaluating jobs does.
           </p>
           <button
             onClick={() => openConnectModal?.()}
@@ -71,10 +74,13 @@ export default function DashboardPage() {
         <div className="dot-grid opacity-40" style={{ bottom: 'auto', height: '100%' }} />
         <div className="orb orb-violet absolute w-80 h-80 -top-24 right-0 opacity-20 pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10">
-          <p className="label mb-3" style={{ color: "#7c3aed" }}>Overview</p>
+          <p className="label mb-3" style={{ color: "#7c3aed" }}>My account</p>
           <h1 className="font-display text-6xl" style={{ color: "var(--text-primary)", letterSpacing: "0.04em" }}>
             DASHBOARD
           </h1>
+          <p className="text-sm mt-2 font-medium" style={{ color: "var(--text-muted)" }}>
+            Jobs you've posted and work you're currently handling.
+          </p>
         </div>
       </div>
 

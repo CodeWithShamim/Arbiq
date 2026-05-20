@@ -24,18 +24,23 @@ export function Footer() {
       className="relative overflow-hidden mt-16"
       style={{ borderTop: "1px solid var(--border-divider)", background: "var(--bg-surface)" }}
     >
-      <div className="orb orb-violet absolute w-72 h-72 -bottom-24 -left-16 opacity-[0.07] pointer-events-none" />
+      <div className="orb orb-violet absolute w-80 h-80 -bottom-28 -left-20 opacity-[0.06] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-14 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
 
           {/* Brand column */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ background: "#a78bfa", boxShadow: "0 0 8px #a78bfa", animation: "brandPulse 2s ease-in-out infinite" }}
-              />
+            <div className="flex items-center gap-2.5 mb-5">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
+                  boxShadow: '0 0 12px rgba(124,58,237,0.35)',
+                }}
+              >
+                <span className="font-display text-white text-sm" style={{ letterSpacing: '0.01em', lineHeight: 1 }}>A</span>
+              </div>
               <span
                 className="font-display text-2xl"
                 style={{ color: "var(--text-primary)", letterSpacing: "0.12em" }}
@@ -43,14 +48,17 @@ export function Footer() {
                 ARBIQ
               </span>
             </div>
-            <p className="text-sm leading-relaxed mb-5 max-w-xs font-medium" style={{ color: "var(--text-muted)" }}>
-              AI-enforced freelance contracts on GenLayer. Post work, earn crypto, let consensus AI judge every delivery.
+            <p className="text-sm leading-relaxed mb-2 max-w-xs font-medium" style={{ color: "var(--text-muted)" }}>
+              Freelance work where the contract enforces payment — not promises.
+            </p>
+            <p className="text-xs mb-6 max-w-xs" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
+              Built on GenLayer Bradbury Testnet. GEN tokens have no real monetary value.
             </p>
             {/* Social icons */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {[
                 { icon: Github,  href: "https://github.com/CodeWithShamim/Arbiq", label: "GitHub"  },
-                { icon: Twitter, href: "https://x.com/CodeWithShamim",            label: "X"       },
+                { icon: Twitter, href: "https://x.com/CodeWithShamim",            label: "X / Twitter" },
               ].map(({ icon: Icon, href, label }) => (
                 <a
                   key={label}
@@ -65,8 +73,8 @@ export function Footer() {
                     color: "var(--text-muted)",
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.12)";
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.28)";
+                    (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.10)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.24)";
                     (e.currentTarget as HTMLElement).style.color = "#a78bfa";
                   }}
                   onMouseLeave={(e) => {
@@ -75,7 +83,7 @@ export function Footer() {
                     (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
                   }}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                 </a>
               ))}
             </div>
@@ -83,15 +91,15 @@ export function Footer() {
 
           {/* Product links */}
           <div>
-            <p className="label mb-4" style={{ color: "#7c3aed" }}>Product</p>
-            <ul className="space-y-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-5" style={{ color: "#7c3aed", letterSpacing: "0.12em" }}>Product</p>
+            <ul className="space-y-3">
               {LINKS.product.map(({ label, href }) => (
                 <li key={href}>
                   <Link
                     href={href}
                     className="text-sm font-medium transition-colors duration-150"
                     style={{ color: "var(--text-muted)" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"; }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-label)"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
                   >
                     {label}
@@ -103,8 +111,8 @@ export function Footer() {
 
           {/* Chain links */}
           <div>
-            <p className="label mb-4" style={{ color: "#7c3aed" }}>GenLayer</p>
-            <ul className="space-y-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-5" style={{ color: "#7c3aed", letterSpacing: "0.12em" }}>GenLayer</p>
+            <ul className="space-y-3">
               {LINKS.chain.map(({ label, href, external }) => (
                 <li key={href}>
                   <a
@@ -113,11 +121,11 @@ export function Footer() {
                     rel={external ? "noopener noreferrer" : undefined}
                     className="text-sm font-medium transition-colors duration-150 inline-flex items-center gap-1.5"
                     style={{ color: "var(--text-muted)" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"; }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-label)"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
                   >
                     {label}
-                    {external && <ExternalLink className="w-3 h-3 opacity-50" />}
+                    {external && <ExternalLink className="w-3 h-3 opacity-40" />}
                   </a>
                 </li>
               ))}
@@ -127,12 +135,12 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 text-xs font-medium"
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 text-xs font-medium"
           style={{ borderTop: "1px solid var(--border-divider)", color: "var(--text-muted)" }}
         >
-          <span>© 2026 Arbiq. All rights reserved.</span>
-          <span className="flex items-center gap-1.5">
-            Built on
+          <span>© 2026 Arbiq. Open source.</span>
+          <span className="flex items-center gap-1.5" style={{ opacity: 0.7 }}>
+            Running on
             <a
               href="https://genlayer.com"
               target="_blank"
@@ -142,7 +150,7 @@ export function Footer() {
             >
               GenLayer
             </a>
-            · Bradbury Testnet
+            Bradbury Testnet · Chain ID 4221
           </span>
         </div>
       </div>

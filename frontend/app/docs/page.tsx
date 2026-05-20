@@ -362,10 +362,10 @@ export default function DocsPage() {
             className="font-display text-5xl md:text-6xl mb-3"
             style={{ color: "var(--text-primary)", letterSpacing: "0.04em" }}
           >
-            ARBIQ DOCS
+            DOCUMENTATION
           </h1>
           <p className="text-lg max-w-xl" style={{ color: "var(--text-muted)", fontWeight: 500 }}>
-            Everything you need to understand, use, and build on Arbiq — the AI-enforced freelance marketplace on GenLayer.
+            How Arbiq works under the hood — contracts, hooks, AI evaluation, and the full job lifecycle.
           </p>
 
           <div className="flex flex-wrap gap-3 mt-6">
@@ -411,22 +411,22 @@ export default function DocsPage() {
             icon={BookOpen}
             accent="#a78bfa"
             label="Introduction"
-            title="WHAT IS ARBIQ"
-            sub="A decentralized freelance platform where payment disputes are settled by AI consensus — not humans."
+            title="HOW ARBIQ WORKS"
+            sub="Payment locked in escrow at post time, released by AI consensus at delivery time — no intermediary needed."
           />
 
           <p className="text-base leading-relaxed mb-4" style={{ color: "var(--text-secondary)" }}>
             Arbiq is built on <strong style={{ color: "var(--text-primary)" }}>GenLayer</strong> — a blockchain that
-            supports <em>Intelligent Contracts</em>: Python contracts that can call LLMs and make non-deterministic
-            decisions through validator consensus. Arbiq uses this to let an AI judge evaluate freelance deliveries
-            and automatically release or withhold escrow.
+            runs <em>Intelligent Contracts</em>: Python smart contracts that can call LLMs and reach non-deterministic
+            consensus across independent validators. Arbiq uses this to have AI evaluate freelance work and automatically
+            settle payment without a trusted third party.
           </p>
 
           <p className="text-base leading-relaxed mb-6" style={{ color: "var(--text-secondary)" }}>
-            When a client posts a job, their GEN tokens lock in the contract immediately. When the freelancer submits
-            work, the client can trigger an AI evaluation — multiple GenLayer validators independently read the job
-            spec and evidence, reach consensus, and execute payment atomically. No platform takes a cut. No human
-            arbiter decides the outcome.
+            When a client posts a job, their GEN tokens lock into the contract immediately. When the freelancer submits
+            evidence of completed work, the client triggers an AI evaluation — multiple GenLayer validators independently
+            read the job spec and evidence URL, compare results, and if they agree, execute payment atomically. No cut,
+            no human arbiter, no payment delays.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
