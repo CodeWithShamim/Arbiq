@@ -436,7 +436,7 @@ function FAQItem({ q, a, isOpen, onToggle }: { q: string; a: string; isOpen: boo
       >
         <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}>{q}</span>
         <ChevronDown
-          className="w-4 h-4 flex-shrink-0 transition-transform duration-300"
+          className="w-4 h-4 shrink-0 transition-transform duration-300"
           style={{ color: '#a78bfa', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
         />
       </button>
@@ -624,7 +624,7 @@ export default function HomePage() {
           {TECH_TAGS.map((tag, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-3 px-6 text-xs font-bold flex-shrink-0"
+              className="inline-flex items-center gap-3 px-6 text-xs font-bold shrink-0"
               style={{ color: i % 4 === 0 ? '#a78bfa' : i % 4 === 1 ? '#38bdf8' : i % 4 === 2 ? '#22c55e' : 'var(--text-muted)', letterSpacing: '0.10em' }}
             >
               {tag}
@@ -636,7 +636,7 @@ export default function HomePage() {
 
       {/* ─── COMPARISON TABLE ──────────────────────────────────────────── */}
       <section className="py-28 px-4 relative">
-        <div className="orb orb-indigo absolute w-[450px] h-[450px] top-10 right-0 opacity-[0.06] pointer-events-none" />
+        <div className="orb orb-indigo absolute w-112.5 h-112.5 top-10 right-0 opacity-[0.06] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="text-center mb-16">
             <p className="label mb-3" style={{ color: '#7c3aed' }}>Honest comparison</p>
@@ -679,11 +679,11 @@ export default function HomePage() {
               >
                 <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{feature}</div>
                 <div className="flex items-center justify-center gap-2">
-                  <X className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ef4444' }} />
+                  <X className="w-3.5 h-3.5 shrink-0" style={{ color: '#ef4444' }} />
                   <span className="text-sm text-center" style={{ color: '#9ca3af' }}>{traditional}</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#22c55e' }} />
+                  <CheckCircle className="w-3.5 h-3.5 shrink-0" style={{ color: '#22c55e' }} />
                   <span className="text-sm font-medium text-center" style={{ color: '#c4b5fd' }}>{arbiq}</span>
                 </div>
               </div>
@@ -694,7 +694,7 @@ export default function HomePage() {
 
       {/* ─── FEATURES ──────────────────────────────────────────────────── */}
       <section className="py-32 px-4 relative">
-        <div className="orb orb-violet absolute w-[500px] h-[500px] top-10 left-1/2 -translate-x-1/2 opacity-[0.07] pointer-events-none" />
+        <div className="orb orb-violet absolute w-125 h-125 top-10 left-1/2 -translate-x-1/2 opacity-[0.07] pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-20">
             <p className="label mb-3" style={{ color: '#7c3aed' }}>How it protects you</p>
@@ -796,14 +796,14 @@ export default function HomePage() {
 
           <div ref={stepsRef} className="relative">
             <div
-              className="absolute left-[19px] top-10 bottom-10 w-px"
+              className="absolute left-4.75 top-10 bottom-10 w-px"
               style={{ background: 'linear-gradient(to bottom, rgba(124,58,237,0.50), transparent)' }}
             />
             <div className="space-y-8">
               {steps.map(({ n, title, desc }, i) => (
                 <div key={n} className="reveal flex gap-6 relative">
                   <div
-                    className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold relative z-10 font-mono"
+                    className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xs font-bold relative z-10 font-mono"
                     style={{
                       background: i < 3
                         ? 'linear-gradient(135deg,#7c3aed,#a78bfa)'
@@ -827,7 +827,7 @@ export default function HomePage() {
 
       {/* ─── FAQ ───────────────────────────────────────────────────────── */}
       <section className="py-24 px-4 relative">
-        <div className="orb orb-violet absolute w-[400px] h-[400px] bottom-0 left-1/2 -translate-x-1/2 opacity-[0.06] pointer-events-none" />
+        <div className="orb orb-violet absolute w-100 h-100 bottom-0 left-1/2 -translate-x-1/2 opacity-[0.06] pointer-events-none" />
         <div className="max-w-2xl mx-auto relative z-10">
           <div className="text-center mb-12">
             <p className="label mb-3" style={{ color: '#7c3aed' }}>FAQ</p>

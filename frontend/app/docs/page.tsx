@@ -26,6 +26,10 @@ import {
   CheckCircle2,
   Clock,
   Package,
+  Map,
+  Circle,
+  CheckCircle,
+  Hourglass,
 } from "lucide-react";
 
 /* ─── Section registry ────────────────────────────────────────────────────── */
@@ -42,6 +46,7 @@ const SECTIONS = [
   { id: "chat",           label: "On-Chain Chat",        icon: MessageSquare },
   { id: "hooks",          label: "Hooks Reference",      icon: Package    },
   { id: "security",       label: "Security Model",       icon: Shield     },
+  { id: "roadmap",        label: "Roadmap",              icon: Map        },
 ];
 
 /* ─── Code block ──────────────────────────────────────────────────────────── */
@@ -1211,6 +1216,143 @@ Explorer:      https://explorer-bradbury.genlayer.com
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* ── ROADMAP ───────────────────────────────────────────────────── */}
+          <SectionHead
+            id="roadmap"
+            icon={Map}
+            accent="#a78bfa"
+            label="What's Next"
+            title="ROADMAP"
+            sub="Planned features, in-progress work, and shipped milestones."
+          />
+
+          <div className="space-y-3 mb-8">
+            {([
+              {
+                phase: "v0.1 — Shipped",
+                status: "shipped",
+                color: "#22c55e",
+                items: [
+                  "On-chain job posting with GEN escrow",
+                  "Freelancer job discovery & acceptance",
+                  "Evidence submission (URL + note)",
+                  "AI consensus evaluation via GenLayer validators",
+                  "Manual client release (bypass AI)",
+                  "On-chain chat between client and freelancer",
+                  "Real-time consensus phase tracker (PROPOSING → ACCEPTED)",
+                  "Notification system (polling + localStorage persistence)",
+                  "Job favorites (localStorage)",
+                  "Browse & filter jobs by status, budget, keyword",
+                  "Light / dark theme toggle",
+                ],
+              },
+              {
+                phase: "v0.2 — In Progress",
+                status: "active",
+                color: "#f59e0b",
+                items: [
+                  "Appeal mechanism for DISPUTED jobs (multi-sig re-evaluation)",
+                  "Partial payment support (milestone-based escrow releases)",
+                  "Freelancer reputation score (on-chain completion history)",
+                  "Job categories and skill tags on-chain",
+                  "Rate limiting & anti-spam on contract level",
+                ],
+              },
+              {
+                phase: "v0.3 — Planned",
+                status: "planned",
+                color: "#38bdf8",
+                items: [
+                  "Mainnet deployment (real GEN tokens)",
+                  "Multi-deliverable jobs (accept partial evidence per milestone)",
+                  "Client rating system for freelancers (also on-chain)",
+                  "Public job feeds & embeddable job widgets",
+                  "Mobile-optimised UI with WalletConnect deep links",
+                ],
+              },
+              {
+                phase: "v1.0 — Future",
+                status: "future",
+                color: "#ec4899",
+                items: [
+                  "DAO governance for AI evaluation parameters",
+                  "Custom validator selection per job (specialized AI models)",
+                  "Encrypted on-chain messaging (symmetric key via ECDH)",
+                  "Multi-currency escrow (any ERC-20)",
+                  "Cross-chain job posting (EVM ↔ GenLayer bridge)",
+                ],
+              },
+            ] as const).map(({ phase, status, color, items }) => (
+              <div
+                key={phase}
+                className="rounded-2xl overflow-hidden"
+                style={{ border: `1px solid ${color}28`, background: `${color}06` }}
+              >
+                {/* Phase header */}
+                <div
+                  className="flex items-center gap-3 px-5 py-4"
+                  style={{ borderBottom: `1px solid ${color}18`, background: `${color}0a` }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: `${color}18`, border: `1px solid ${color}30` }}
+                  >
+                    {status === "shipped"  && <CheckCircle className="w-4 h-4" style={{ color }} />}
+                    {status === "active"   && <Hourglass   className="w-4 h-4" style={{ color }} />}
+                    {status === "planned"  && <Circle      className="w-4 h-4" style={{ color }} />}
+                    {status === "future"   && <Circle      className="w-4 h-4" style={{ color, opacity: 0.5 }} />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{phase}</p>
+                  </div>
+                  <span
+                    className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest"
+                    style={{ background: `${color}18`, border: `1px solid ${color}30`, color }}
+                  >
+                    {status === "shipped" ? "✦ Done" : status === "active" ? "In Progress" : status === "planned" ? "Planned" : "Future"}
+                  </span>
+                </div>
+
+                {/* Items */}
+                <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                  {items.map((item) => (
+                    <div key={item} className="flex items-start gap-2.5 text-sm">
+                      <div
+                        className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: color, opacity: status === "future" ? 0.45 : 1 }}
+                      />
+                      <span style={{ color: status === "future" ? "var(--text-muted)" : "var(--text-secondary)" }}>
+                        {item}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="rounded-xl p-5 mb-8"
+            style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)" }}
+          >
+            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "#a78bfa", letterSpacing: "0.1em" }}>
+              Contributing
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              Arbiq is open source. Have an idea or found a bug? Open an issue or PR on{" "}
+              <a
+                href="https://github.com/CodeWithShamim/Arbiq"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold transition-colors"
+                style={{ color: "#a78bfa" }}
+              >
+                GitHub ↗
+              </a>
+              . Feature requests that align with the roadmap are prioritised.
+            </p>
           </div>
 
           {/* ── CTA ───────────────────────────────────────────────────────── */}
