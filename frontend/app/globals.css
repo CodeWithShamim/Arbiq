@@ -371,6 +371,66 @@ body:has([data-cursor-expand]:hover) #cursor-ring {
   from { transform: rotate(240deg) translateX(18px) rotate(-240deg); }
   to   { transform: rotate(600deg) translateX(18px) rotate(-600deg); }
 }
+/* ─── Hero 3D animations ─────────────────────────────────────────────────── */
+@keyframes heroCardFloat {
+  0%,100% { transform: perspective(1200px) rotateX(8deg) rotateY(-12deg) translateY(0px); }
+  33%      { transform: perspective(1200px) rotateX(5deg) rotateY(-8deg) translateY(-14px); }
+  66%      { transform: perspective(1200px) rotateX(11deg) rotateY(-16deg) translateY(6px); }
+}
+@keyframes heroCardFloatB {
+  0%,100% { transform: perspective(900px) rotateX(-6deg) rotateY(14deg) translateY(0px); }
+  40%      { transform: perspective(900px) rotateX(-10deg) rotateY(10deg) translateY(-10px); }
+  70%      { transform: perspective(900px) rotateX(-4deg) rotateY(18deg) translateY(8px); }
+}
+@keyframes polyMorph {
+  0%   { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+  25%  { border-radius: 58% 42% 38% 62% / 44% 64% 36% 56%; }
+  50%  { border-radius: 70% 30% 46% 54% / 60% 40% 60% 40%; }
+  75%  { border-radius: 42% 58% 66% 34% / 52% 36% 64% 48%; }
+  100% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+}
+@keyframes particleDrift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 0.6; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.4); opacity: 0; }
+}
+@keyframes glowPulse3D {
+  0%,100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+@keyframes scanLine {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(500%); opacity: 0; }
+}
+@keyframes hexSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes hexSpinRev {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes dataStream {
+  0%   { transform: translateY(0); opacity: 0.7; }
+  100% { transform: translateY(-200px); opacity: 0; }
+}
+@keyframes heroTextGlow {
+  0%,100% { text-shadow: 0 0 80px rgba(124,58,237,0), 0 0 0 transparent; }
+  50%      { text-shadow: 0 0 80px rgba(124,58,237,0.35), 0 0 120px rgba(99,102,241,0.2); }
+}
+@keyframes borderRing {
+  0%   { transform: rotate(0deg) scale(1);   opacity: 0.6; }
+  50%  { transform: rotate(180deg) scale(1.06); opacity: 1; }
+  100% { transform: rotate(360deg) scale(1);  opacity: 0.6; }
+}
+@keyframes ctaShimmer {
+  0%   { left: -60%; }
+  100% { left: 120%;  }
+}
+
 @keyframes phaseDots {
   0%   { content: "";    }
   33%  { content: ".";   }

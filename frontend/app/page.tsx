@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Shield, Zap, Brain, ArrowRight, CheckCircle, Lock, Scale, Coins, ChevronDown, Play, X } from 'lucide-react';
+import { Shield, Zap, Brain, ArrowRight, CheckCircle, Lock, Scale, Coins, ChevronDown, X } from 'lucide-react';
 import { useGetAllJobs } from '@/hooks/useArbiqContract';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
@@ -119,6 +119,276 @@ const faqs = [
   },
 ];
 
+/* ── 3D floating scene ─────────────────────────────────────────────────────── */
+function Hero3DScene() {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const parent = el.parentElement;
+    if (!parent) return;
+    const onMove = (e: MouseEvent) => {
+      const rect = parent.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / rect.width;
+      const dy = (e.clientY - cy) / rect.height;
+      el.style.transform = `perspective(1200px) rotateX(${-dy * 14}deg) rotateY(${dx * 18}deg) translateZ(20px)`;
+    };
+    const onLeave = () => {
+      el.style.transform = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    el.addEventListener('mouseleave', onLeave);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, []);
+
+  return (
+    <div style={{ width: 420, height: 520, position: 'relative' }}>
+
+      {/* Spinning hex rings */}
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%',
+        width: 460, height: 460,
+        marginLeft: -230, marginTop: -230,
+        border: '1px solid rgba(124,58,237,0.12)',
+        borderRadius: '50%',
+        animation: 'borderRing 20s linear infinite',
+      }} />
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%',
+        width: 380, height: 380,
+        marginLeft: -190, marginTop: -190,
+        border: '1px dashed rgba(167,139,250,0.10)',
+        borderRadius: '50%',
+        animation: 'borderRing 14s linear infinite reverse',
+      }} />
+
+      {/* Rotating outer hex ring */}
+      <svg
+        style={{
+          position: 'absolute', top: '50%', left: '50%',
+          width: 500, height: 500,
+          marginLeft: -250, marginTop: -250,
+          animation: 'hexSpin 30s linear infinite',
+          opacity: 0.18,
+        }}
+        viewBox="0 0 500 500"
+      >
+        {[0,60,120,180,240,300].map((deg, i) => {
+          const r = 230;
+          const x = 250 + r * Math.cos((deg * Math.PI) / 180);
+          const y = 250 + r * Math.sin((deg * Math.PI) / 180);
+          return <circle key={i} cx={x} cy={y} r={4} fill="#a78bfa" />;
+        })}
+        <polygon points="250,20 476,135 476,365 250,480 24,365 24,135" fill="none" stroke="rgba(124,58,237,0.4)" strokeWidth="1" />
+      </svg>
+
+      {/* Inner counter-rotating ring */}
+      <svg
+        style={{
+          position: 'absolute', top: '50%', left: '50%',
+          width: 320, height: 320,
+          marginLeft: -160, marginTop: -160,
+          animation: 'hexSpinRev 18s linear infinite',
+          opacity: 0.25,
+        }}
+        viewBox="0 0 320 320"
+      >
+        <polygon points="160,10 302,85 302,235 160,310 18,235 18,85" fill="none" stroke="rgba(167,139,250,0.5)" strokeWidth="1" strokeDasharray="6 4" />
+        {[0,60,120,180,240,300].map((deg, i) => {
+          const r = 148;
+          const x = 160 + r * Math.cos(((deg + 30) * Math.PI) / 180);
+          const y = 160 + r * Math.sin(((deg + 30) * Math.PI) / 180);
+          return <circle key={i} cx={x} cy={y} r={2.5} fill="#c4b5fd" />;
+        })}
+      </svg>
+
+      {/* Main 3D card */}
+      <div
+        ref={cardRef}
+        style={{
+          position: 'absolute',
+          top: '50%', left: '50%',
+          width: 300, height: 360,
+          marginLeft: -150, marginTop: -180,
+          borderRadius: 24,
+          background: 'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(124,58,237,0.06) 50%, rgba(99,102,241,0.04) 100%)',
+          border: '1px solid rgba(167,139,250,0.20)',
+          boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.10)',
+          backdropFilter: 'blur(20px)',
+          transition: 'transform 0.12s ease-out',
+          animation: 'heroCardFloat 10s ease-in-out infinite',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Scan line */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, height: 2,
+          background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.6), transparent)',
+          animation: 'scanLine 5s ease-in-out infinite',
+          zIndex: 3,
+        }} />
+
+        {/* Card header */}
+        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: 'linear-gradient(135deg, #7c3aed, #a78bfa)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(124,58,237,0.4)',
+            }}>
+              <Lock size={14} color="white" />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', letterSpacing: '0.08em' }}>SMART CONTRACT</div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: '"JetBrains Mono",monospace', letterSpacing: '0.05em' }}>arbiq.genlayer.eth</div>
+            </div>
+            <div style={{ marginLeft: 'auto' }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%', background: '#22c55e',
+                boxShadow: '0 0 8px #22c55e',
+                animation: 'glowPulse3D 2s ease-in-out infinite',
+              }} />
+            </div>
+          </div>
+
+          {/* Escrow amount */}
+          <div style={{
+            background: 'rgba(124,58,237,0.10)',
+            border: '1px solid rgba(124,58,237,0.18)',
+            borderRadius: 12, padding: '10px 14px',
+          }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '0.10em', marginBottom: 3 }}>ESCROWED</div>
+            <div style={{ fontSize: 22, fontFamily: '"Bebas Neue",sans-serif', color: '#c4b5fd', letterSpacing: '0.06em', lineHeight: 1 }}>2.5 GEN</div>
+            <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 700, letterSpacing: '0.06em', marginTop: 2 }}>● LOCKED UNTIL CONSENSUS</div>
+          </div>
+        </div>
+
+        {/* Validators section */}
+        <div style={{ padding: '14px 20px' }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.10em', marginBottom: 10 }}>AI VALIDATORS</div>
+          {[
+            { label: 'PROPOSING', color: '#22c55e', done: true },
+            { label: 'COMMITTING', color: '#22c55e', done: true },
+            { label: 'REVEALING', color: '#a78bfa', active: true },
+            { label: 'ACCEPTED', color: 'rgba(255,255,255,0.2)', done: false },
+          ].map(({ label, color, done, active }, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+              <div style={{
+                width: 14, height: 14, borderRadius: '50%',
+                border: `1.5px solid ${color}`,
+                background: done ? `${color}22` : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {done && <div style={{ width: 5, height: 5, borderRadius: '50%', background: color }} />}
+                {active && <div style={{ width: 5, height: 5, borderRadius: '50%', background: color, animation: 'dotPulse 1s ease-in-out infinite' }} />}
+              </div>
+              <div style={{ flex: 1, height: 1, background: done ? `${color}40` : 'rgba(255,255,255,0.05)', borderRadius: 1 }} />
+              <div style={{ fontSize: 8, fontFamily: '"JetBrains Mono",monospace', color, fontWeight: 700, letterSpacing: '0.06em', opacity: done || active ? 1 : 0.35 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom verdict */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          padding: '12px 20px',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(34,197,94,0.05)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: '#86efac', letterSpacing: '0.08em' }}>✦ AI VERDICT: APPROVED</div>
+          <div style={{ fontSize: 9, fontFamily: '"JetBrains Mono",monospace', color: 'rgba(255,255,255,0.3)' }}>7/7</div>
+        </div>
+      </div>
+
+      {/* Secondary floating card */}
+      <div style={{
+        position: 'absolute',
+        top: '15%', right: -20,
+        width: 160, height: 90,
+        borderRadius: 16,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(99,102,241,0.06) 100%)',
+        border: '1px solid rgba(99,102,241,0.25)',
+        backdropFilter: 'blur(12px)',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+        padding: '12px 14px',
+        animation: 'heroCardFloatB 8s ease-in-out infinite',
+        animationDelay: '2s',
+      }}>
+        <div style={{ fontSize: 8, fontWeight: 700, color: '#38bdf8', letterSpacing: '0.10em', marginBottom: 6 }}>PAYOUT</div>
+        <div style={{ fontSize: 18, fontFamily: '"Bebas Neue",sans-serif', color: '#f0f0ff', letterSpacing: '0.06em', lineHeight: 1 }}>INSTANT</div>
+        <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>On consensus · 0% fee</div>
+      </div>
+
+      {/* Tertiary floating chip */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20%', left: -10,
+        width: 140, height: 68,
+        borderRadius: 14,
+        background: 'rgba(236,72,153,0.06)',
+        border: '1px solid rgba(236,72,153,0.22)',
+        backdropFilter: 'blur(10px)',
+        padding: '10px 14px',
+        animation: 'heroCardFloat 12s ease-in-out infinite',
+        animationDelay: '5s',
+        boxShadow: '0 16px 32px rgba(0,0,0,0.3)',
+      }}>
+        <div style={{ fontSize: 8, fontWeight: 700, color: '#f9a8d4', letterSpacing: '0.10em', marginBottom: 4 }}>PLATFORM FEE</div>
+        <div style={{ fontSize: 24, fontFamily: '"Bebas Neue",sans-serif', color: '#f0f0ff', letterSpacing: '0.06em', lineHeight: 1 }}>0%</div>
+      </div>
+
+    </div>
+  );
+}
+
+/* ── Particle field ─────────────────────────────────────────────────────────── */
+function HeroParticles() {
+  const particles = Array.from({ length: 28 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: 1.5 + Math.random() * 2.5,
+    delay: Math.random() * 6,
+    duration: 5 + Math.random() * 8,
+    dx: (Math.random() - 0.5) * 120,
+    dy: -60 - Math.random() * 100,
+    color: i % 3 === 0 ? '#a78bfa' : i % 3 === 1 ? '#38bdf8' : '#c4b5fd',
+  }));
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            position: 'absolute',
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: p.size,
+            height: p.size,
+            borderRadius: '50%',
+            background: p.color,
+            boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
+            animation: `particleDrift ${p.duration}s ease-in infinite`,
+            animationDelay: `${p.delay}s`,
+            '--dx': `${p.dx}px`,
+            '--dy': `${p.dy}px`,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
 function LiveStats() {
   const { data: jobs = [] } = useGetAllJobs();
   const total     = useCountUp(jobs.length, 800);
@@ -189,116 +459,160 @@ export default function HomePage() {
       <Navbar />
 
       {/* ─── HERO ──────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center pt-44 pb-32 px-4 text-center overflow-hidden">
+      <section className="relative overflow-hidden" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
+        {/* Background layers */}
         <div className="dot-grid" />
-
-        <div
-          className="orb orb-violet absolute w-[700px] h-[700px] -top-40 left-1/2 -translate-x-1/2 opacity-40 anim-orb-float"
-          style={{ animationDuration: '14s' }}
-        />
-        <div className="orb orb-indigo absolute w-[380px] h-[380px] top-72 -left-40 opacity-25 anim-orb-float" style={{ animationDelay: '4s', animationDuration: '18s' }} />
-        <div className="orb orb-pink   absolute w-[280px] h-[280px] top-80 -right-20 opacity-20 anim-orb-float" style={{ animationDelay: '8s', animationDuration: '16s' }} />
-
         <div className="absolute inset-0 hero-grain pointer-events-none" />
 
+        {/* Deep glow cores */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 60% 50% at 50% 10%, rgba(124,58,237,0.18) 0%, transparent 70%)',
+        }} />
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 40% 60% at 80% 60%, rgba(99,102,241,0.10) 0%, transparent 70%)',
+        }} />
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 35% 50% at 10% 70%, rgba(236,72,153,0.07) 0%, transparent 70%)',
+        }} />
+
+        {/* Polymorphic blob — top left */}
         <div
-          className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-bold mb-12 anim-fade-in relative z-10"
+          className="absolute pointer-events-none"
           style={{
-            background: 'rgba(124,58,237,0.08)',
-            border: '1px solid rgba(124,58,237,0.24)',
-            color: '#c4b5fd',
-            letterSpacing: '0.10em',
+            width: 480, height: 480,
+            top: -80, left: -120,
+            background: 'radial-gradient(circle at 40% 40%, rgba(124,58,237,0.22) 0%, rgba(99,102,241,0.12) 40%, transparent 70%)',
+            filter: 'blur(40px)',
+            animation: 'polyMorph 14s ease-in-out infinite',
           }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#a78bfa', boxShadow: '0 0 8px #a78bfa', animation: 'brandPulse 2s ease-in-out infinite' }} />
-          POWERED BY GENLAYER AI CONSENSUS
+        />
+        {/* Polymorphic blob — bottom right */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: 360, height: 360,
+            bottom: -60, right: -60,
+            background: 'radial-gradient(circle at 60% 60%, rgba(236,72,153,0.14) 0%, rgba(124,58,237,0.08) 50%, transparent 70%)',
+            filter: 'blur(50px)',
+            animation: 'polyMorph 18s ease-in-out infinite reverse',
+            animationDelay: '3s',
+          }}
+        />
+
+        {/* Floating 3D cards — right side (desktop) */}
+        <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none hidden lg:block" style={{ zIndex: 2 }}>
+          <Hero3DScene />
         </div>
 
-        {/* Headline with animated gradient border */}
-        <div
-          className="relative mx-auto anim-fade-up"
-          style={{ animationDelay: '80ms', maxWidth: '900px' }}
-        >
+        {/* Particle field */}
+        <HeroParticles />
+
+        {/* ── Left content ── */}
+        <div className="relative z-10 w-full px-6 md:px-16 pt-32 pb-24 lg:max-w-[58%]">
+
+          {/* Badge */}
           <div
-            className="absolute -inset-3 rounded-3xl pointer-events-none"
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-bold mb-10 anim-fade-in"
             style={{
-              background: 'linear-gradient(120deg, rgba(124,58,237,0.55), rgba(99,102,241,0.35), rgba(167,139,250,0.55), rgba(124,58,237,0.35))',
-              backgroundSize: '300% 300%',
-              animation: 'gradientShift 5s ease infinite',
-              WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-              WebkitMaskComposite: 'xor',
-              maskComposite: 'exclude',
-              padding: '1.5px',
-              borderRadius: '24px',
+              background: 'rgba(124,58,237,0.08)',
+              border: '1px solid rgba(124,58,237,0.24)',
+              color: '#c4b5fd',
+              letterSpacing: '0.10em',
+              backdropFilter: 'blur(8px)',
             }}
-          />
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#a78bfa', boxShadow: '0 0 8px #a78bfa', animation: 'brandPulse 2s ease-in-out infinite' }} />
+            POWERED BY GENLAYER AI CONSENSUS
+          </div>
+
+          {/* Headline */}
           <h1
-            className="display grad-text-hero relative z-10"
-            style={{ padding: '0.5rem 1rem' }}
-          >
-            GET PAID.<br />OR GET PROOF.
-          </h1>
-        </div>
-
-        <p
-          className="text-lg md:text-xl max-w-lg mx-auto mt-7 mb-10 leading-relaxed relative z-10 anim-fade-up"
-          style={{ color: 'var(--text-secondary)', animationDelay: '140ms', fontWeight: 500 }}
-        >
-          Arbiq locks client funds on-chain and uses AI to judge every delivery.
-          If the work ships, you get paid. No negotiation, no waiting, no disputes left open.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center gap-3 relative z-10 anim-fade-up" style={{ animationDelay: '200ms' }}>
-          <Link
-            href="/jobs/new"
-            className="btn-primary flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-base"
-          >
-            Post a Job <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            href="/jobs"
-            className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-base transition-all duration-200"
+            className="display grad-text-hero anim-fade-up"
             style={{
-              background: 'var(--surface-raised)',
-              border: '1px solid var(--border-mid)',
-              color: 'var(--text-label)',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--surface-raised)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-mid)';
+              animationDelay: '60ms',
+              fontSize: 'clamp(3.8rem, 9vw, 8.5rem)',
+              lineHeight: 0.9,
+              letterSpacing: '0.02em',
+              animation: 'fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both 60ms, heroTextGlow 4s ease-in-out infinite 1s',
             }}
           >
-            Find Work
-          </Link>
-          <Link
-            href="#how-it-works"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200"
-            style={{ color: '#a78bfa' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#c4b5fd'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#a78bfa'; }}
+            GET PAID.<br />
+            <span style={{ opacity: 0.85 }}>OR GET</span><br />
+            PROOF.
+          </h1>
+
+          {/* Animated underline */}
+          <div className="mt-4 mb-8 anim-fade-in" style={{ animationDelay: '200ms' }}>
+            <div style={{
+              height: 2,
+              width: 120,
+              background: 'linear-gradient(90deg, #7c3aed, #a78bfa, transparent)',
+              borderRadius: 2,
+              animation: 'gradientShift 3s ease infinite',
+              backgroundSize: '200% 100%',
+            }} />
+          </div>
+
+          <p
+            className="text-lg max-w-md leading-relaxed anim-fade-up"
+            style={{ color: 'var(--text-secondary)', animationDelay: '160ms', fontWeight: 500, fontSize: '1.0625rem' }}
           >
-            <Play className="w-3.5 h-3.5" style={{ fill: 'currentColor' }} />
-            Watch how it works
-          </Link>
-        </div>
+            Arbiq locks client funds on-chain and uses AI to judge every delivery.
+            If the work ships, you get paid. No negotiation, no waiting, no disputes left open.
+          </p>
 
-        <div
-          className="flex flex-wrap items-center justify-center gap-6 mt-10 text-xs relative z-10 anim-fade-in"
-          style={{ color: 'var(--text-muted)', animationDelay: '300ms', fontWeight: 600, letterSpacing: '0.05em' }}
-        >
-          {['Funds locked in escrow', 'AI-enforced verdicts', 'Fully on-chain'].map((t) => (
-            <span key={t} className="flex items-center gap-1.5">
-              <CheckCircle className="w-3.5 h-3.5" style={{ color: '#7c3aed' }} />
-              {t.toUpperCase()}
-            </span>
-          ))}
-        </div>
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-start gap-3 mt-10 anim-fade-up" style={{ animationDelay: '220ms' }}>
+            <Link
+              href="/jobs/new"
+              className="btn-primary relative overflow-hidden flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-base"
+            >
+              <span
+                className="absolute top-0 bottom-0 w-12"
+                style={{
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)',
+                  animation: 'ctaShimmer 2.8s ease-in-out infinite',
+                  left: '-60%',
+                }}
+              />
+              Post a Job <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/jobs"
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-base transition-all duration-200"
+              style={{
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--border-mid)',
+                color: 'var(--text-label)',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = 'var(--surface-raised)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-mid)';
+              }}
+            >
+              Find Work
+            </Link>
+          </div>
 
-        <LiveStats />
+          {/* Trust chips */}
+          <div
+            className="flex flex-wrap items-center gap-4 mt-10 text-xs anim-fade-in"
+            style={{ color: 'var(--text-muted)', animationDelay: '320ms', fontWeight: 600, letterSpacing: '0.05em' }}
+          >
+            {['Funds locked in escrow', 'AI-enforced verdicts', 'Fully on-chain'].map((t) => (
+              <span key={t} className="flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5" style={{ color: '#7c3aed' }} />
+                {t.toUpperCase()}
+              </span>
+            ))}
+          </div>
+
+          <LiveStats />
+        </div>
       </section>
 
       {/* ─── MARQUEE ───────────────────────────────────────────────────── */}
