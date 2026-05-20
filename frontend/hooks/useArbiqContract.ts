@@ -1,21 +1,23 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAccount, useWalletClient } from "wagmi";
 import { parseEther } from "viem";
 import type { CalldataEncodable, TransactionHash } from "genlayer-js/types";
 import { isDecidedState, transactionsStatusNumberToName } from "genlayer-js/types";
-import { genLayerClient, createClient, testnetBradbury, CONTRACT_ADDRESS, readContract } from "@/lib/genlayer/client";
+import {
+  genLayerClient,
+  createClient,
+  testnetBradbury,
+  CONTRACT_ADDRESS,
+  readContract,
+  invalidateReadCache,
+} from "@/lib/genlayer/client";
 import type { Job } from "@/lib/types";
 import { useError } from "@/lib/error-context";
 import { friendlyError } from "@/lib/errors";
-
-// Set to true while any write tx is in-flight so read hooks pause their polling
-// and don't compete with the write for the shared testnet RPC rate limit.
-let txInFlight = false;
-export function setTxInFlight(v: boolean) { txInFlight = v; }
 
 function parseJobsJson(raw: unknown): Job[] {
   try {
@@ -46,8 +48,8 @@ export function useGetAllJobs() {
       const raw = await readContract("get_all_jobs");
       return parseJobsJson(raw);
     },
-    staleTime: 30_000,
-    refetchInterval: () => txInFlight ? false : 60_000,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }
@@ -61,8 +63,8 @@ export function useGetJob(id: number | undefined) {
       return parseJobJson(raw);
     },
     enabled: id !== undefined,
-    staleTime: 15_000,
-    refetchInterval: () => txInFlight ? false : 30_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
 }
 
@@ -82,31 +84,35 @@ export function useGetJobCount() {
   return useQuery({
     queryKey: ["arbiq", "jobCount"],
     queryFn: () => readContract("get_job_count"),
-    refetchInterval: () => txInFlight ? false : 60_000,
+    refetchInterval: 30_000,
   });
 }
 
 // ─── Write hook factory ───────────────────────────────────────────────────────
 // GenLayer write flow:
-//   1. genLayerClient.writeContract() → msgpack-encodes args, sends eth_sendTransaction
-//      to the CONSENSUS contract (not the app contract directly), returns a txId (bytes32 hash)
-//   2. genLayerClient.waitForTransactionReceipt() → polls gen_getTransaction until
-//      status reaches ACCEPTED (validators have reached consensus)
-//   3. Receipt contains consensus_data.leader_receipt[].result — the contract return value
+//   1. writeClient.writeContract() → msgpack-encodes args, sends eth_sendTransaction
+//      to the CONSENSUS contract, returns a txId (bytes32 hash)
+//   2. pollStatus() → polls gen_getTransaction every 500ms until decided state
+//   3. On decided: invalidate React Query cache + read cache for fresh data
 
 interface TxState {
   txHash: TransactionHash | null;
-  // pending    = submitted to mempool, waiting for consensus to pick it up
-  // finalizing = consensus is running (validators proposing / committing / revealing)
-  // finalized  = ACCEPTED by consensus — state is committed
-  // error      = any failure
   status: "idle" | "pending" | "finalizing" | "finalized" | "error";
-  // Human-readable consensus status from gen_getTransaction (PROPOSING, COMMITTING, etc.)
   consensusStatus: string | null;
-  // Decoded return value from the leader receipt (e.g. job_id for post_job)
   returnValue: unknown | null;
   error: string | null;
 }
+
+const IDLE: TxState = {
+  txHash: null,
+  status: "idle",
+  consensusStatus: null,
+  returnValue: null,
+  error: null,
+};
+
+// Methods whose cached reads must be busted after any write
+const WRITE_INVALIDATES = ["get_all_jobs", "get_job", "get_job_count", "get_messages"];
 
 function useContractWrite() {
   const { address } = useAccount();
@@ -114,33 +120,31 @@ function useContractWrite() {
   const queryClient = useQueryClient();
   const { showError } = useError();
 
-  const [txState, setTxState] = useState<TxState>({
-    txHash: null,
-    status: "idle",
-    consensusStatus: null,
-    returnValue: null,
-    error: null,
-  });
+  // Cache the write client so it isn't re-created on every send()
+  const writeClientRef = useRef<ReturnType<typeof createClient> | null>(null);
 
-  const reset = useCallback(() => {
-    setTxState({ txHash: null, status: "idle", consensusStatus: null, returnValue: null, error: null });
-  }, []);
+  const [txState, setTxState] = useState<TxState>(IDLE);
+
+  const reset = useCallback(() => setTxState(IDLE), []);
 
   const pollStatus = useCallback(
     async (hash: TransactionHash, maxRetries: number) => {
       setTxState((s) => ({ ...s, status: "finalizing", consensusStatus: "PENDING" }));
 
-      // Poll getTransaction at 2s intervals to stay within testnet rate limits
-      // while still giving near-real-time consensus status updates.
+      // Wait a fixed 2s for the tx to land before starting to poll —
+      // avoids burning retries on guaranteed 404s right after submission.
+      await new Promise((r) => setTimeout(r, 2_000));
+
+      // Then poll every 500ms for fast finalization detection.
       for (let attempt = 0; attempt < maxRetries; attempt++) {
-        await new Promise((r) => setTimeout(r, 2_000));
         try {
           const tx = await genLayerClient.getTransaction({ hash });
           const statusNum = String(tx.status);
-          // transactionsStatusNumberToName maps "5" → "ACCEPTED", "2" → "PROPOSING", etc.
-          const statusName = transactionsStatusNumberToName[statusNum as keyof typeof transactionsStatusNumberToName] ?? "PENDING";
+          const statusName =
+            transactionsStatusNumberToName[
+              statusNum as keyof typeof transactionsStatusNumberToName
+            ] ?? "PENDING";
 
-          // Surface the live phase in the UI on every tick
           setTxState((s) => ({ ...s, consensusStatus: statusName }));
 
           if (isDecidedState(statusNum)) {
@@ -152,23 +156,27 @@ function useContractWrite() {
                 returnValue = (lr[0] as Record<string, unknown>).result ?? null;
               }
             }
-            txInFlight = false;
+
+            // Bust both the in-memory read cache and React Query cache
+            invalidateReadCache(...WRITE_INVALIDATES);
+            queryClient.invalidateQueries({ queryKey: ["arbiq"] });
+
             setTxState((s) => ({
               ...s,
               status: "finalized",
               consensusStatus: statusName,
               returnValue,
             }));
-            queryClient.invalidateQueries({ queryKey: ["arbiq"] });
             return;
           }
         } catch {
-          // getTransaction may 404 briefly after submission — keep polling
+          // getTransaction may still 404 briefly — keep polling
         }
+
+        await new Promise((r) => setTimeout(r, 500));
       }
 
-      txInFlight = false;
-      const timeoutMsg = `Timed out after ${maxRetries * 2}s waiting for consensus`;
+      const timeoutMsg = `Timed out after ${2 + maxRetries * 0.5}s waiting for consensus`;
       setTxState((s) => ({ ...s, status: "error", error: timeoutMsg }));
       showError(new Error(timeoutMsg));
     },
@@ -180,8 +188,8 @@ function useContractWrite() {
       functionName,
       args,
       value,
-      // retries = max poll attempts (1 poll/2s). 60 attempts = ~120s for deterministic.
-      retries = 60,
+      // retries = poll attempts at 500ms each. 180 = ~90s for deterministic ops.
+      retries = 180,
     }: {
       functionName: string;
       args: CalldataEncodable[];
@@ -189,33 +197,23 @@ function useContractWrite() {
       retries?: number;
     }) => {
       if (!address || !walletClient) {
-        const msg = "Wallet not connected";
-        setTxState((s) => ({ ...s, status: "error", error: msg }));
-        showError(new Error(msg));
+        setTxState((s) => ({ ...s, status: "error", error: "Wallet not connected" }));
         return null;
       }
 
-      setTxState({ txHash: null, status: "pending", consensusStatus: null, returnValue: null, error: null });
-      txInFlight = true;
+      setTxState({ ...IDLE, status: "pending" });
 
       try {
-        // account must be a plain address STRING (not an object) so that genlayer-js
-        // sets isAddress=true and routes eth_sendTransaction through the provider.
-        // If account is an object, isAddress=false and the call goes to the RPC node
-        // which has no signer — causing "node has no signer accounts".
-        const writeClient = createClient({
-          chain: testnetBradbury,
-          provider: walletClient,   // wagmi's EIP-1193 wallet, not window.ethereum
-          account: address,         // string → isAddress=true → uses provider for signing
-        });
+        // Re-use cached write client if wallet hasn't changed
+        if (!writeClientRef.current) {
+          writeClientRef.current = createClient({
+            chain: testnetBradbury,
+            provider: walletClient,
+            account: address,
+          });
+        }
 
-        // writeContract:
-        //   - msgpack-encodes functionName + args
-        //   - sends the encoded payload to the consensus main contract address
-        //   - walletClient signs & broadcasts the EVM tx (not window.ethereum)
-        //   - extracts the GenLayer txId from the CreatedTransaction event log
-        //   - returns that txId (used for polling, NOT an EVM tx hash)
-        const txHash = await writeClient.writeContract({
+        const txHash = await writeClientRef.current.writeContract({
           address: CONTRACT_ADDRESS,
           functionName,
           args,
@@ -224,27 +222,32 @@ function useContractWrite() {
 
         setTxState((s) => ({ ...s, txHash: txHash as TransactionHash }));
 
-        // Poll asynchronously so the caller gets the txHash immediately
+        // Poll asynchronously — caller gets txHash immediately
         pollStatus(txHash as TransactionHash, retries);
 
         return txHash;
       } catch (err: unknown) {
-        txInFlight = false;
         const msg = friendlyError(err);
-        setTxState({ txHash: null, status: "error", consensusStatus: null, returnValue: null, error: msg });
+        setTxState({ ...IDLE, status: "error", error: msg });
         showError(err);
         return null;
       }
     },
-    [address, walletClient, pollStatus]
+    [address, walletClient, pollStatus, showError]
   );
 
-  // Simulate a write without submitting — uses gen_call(type:"write") on the node.
-  // Useful for previewing the return value (e.g. job_id) before spending gas.
+  // Invalidate write client cache when wallet changes
+  const sendWithClientReset = useCallback(
+    (args: Parameters<typeof send>[0]) => {
+      writeClientRef.current = null;
+      return send(args);
+    },
+    [send]
+  );
+
   const simulate = useCallback(
     async ({ functionName, args }: { functionName: string; args: CalldataEncodable[] }) => {
       if (!address) throw new Error("Wallet not connected");
-      // simulate uses the read-only client — gen_call(type:"write") needs no wallet
       return genLayerClient.simulateWriteContract({
         address: CONTRACT_ADDRESS,
         functionName,
@@ -254,7 +257,7 @@ function useContractWrite() {
     [address]
   );
 
-  return { send, simulate, txState, reset, isConnected: !!address };
+  return { send: sendWithClientReset, simulate, txState, reset, isConnected: !!address };
 }
 
 // ─── Public write hooks ───────────────────────────────────────────────────────
@@ -272,7 +275,6 @@ export function usePostJob() {
     [send]
   );
 
-  // Preview the job_id that would be assigned without submitting the tx
   const simulatePostJob = useCallback(
     (params: { title: string; description: string; deadline: string; budgetEth: string }) =>
       simulate({
@@ -338,8 +340,8 @@ export function useAutoEvaluate() {
       send({
         functionName: "auto_evaluate",
         args: [jobId],
-        // AI evaluation needs more time — 150 polls × 2s = ~5 min
-        retries: 150,
+        // AI evaluation: 600 polls × 500ms = ~5 min
+        retries: 600,
       }),
     [send]
   );
@@ -394,8 +396,8 @@ export function useGetMessages(jobId: number | undefined) {
       }
     },
     enabled: jobId !== undefined,
-    staleTime: 30_000,
-    refetchInterval: () => txInFlight ? false : 45_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
 }
 
