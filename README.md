@@ -3,7 +3,9 @@
 Arbiq is a decentralized freelance escrow platform where payment disputes are resolved autonomously by an AI judge running on the [GenLayer](https://genlayer.com) blockchain. Clients lock GEN tokens in escrow when posting a job; when a freelancer submits their delivery, the client can trigger an on-chain AI evaluation — multiple GenLayer validator nodes independently fetch and read the evidence URL, reach consensus on whether the work satisfies the job spec, and automatically release or withhold payment. No central arbitrator. No appeals process needed.
 
 > **Live network:** GenLayer Bradbury Testnet (Chain ID 4221)
-> **Contract:** `contracts/arbiq.py` — an Intelligent Contract written in Python
+> **Contract address:** [`0x26517582E3B1E89F55823ba217191321992D9592`](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)
+> **Explorer:** [explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)
+> **Contract source:** `contracts/arbiq.py` — an Intelligent Contract written in Python
 
 ---
 
@@ -434,10 +436,14 @@ After deployment, restart the dev server to pick up the new address.
 | Method | Payable | Description |
 |---|---|---|
 | `post_job(title, description, deadline)` | Yes | Create a job; GEN sent is held in escrow |
+| `post_job_milestones(title, description, deadline, milestone_titles)` | Yes | Create a job with milestone-based payments |
 | `take_job(job_id)` | No | Freelancer accepts an open job |
 | `submit_delivery(job_id, evidence_url, evidence_note)` | No | Freelancer marks job as delivered |
+| `submit_milestone_delivery(job_id, milestone_idx, evidence_url, evidence_note)` | No | Submit delivery for a specific milestone |
+| `approve_milestone(job_id, milestone_idx)` | No | Client approves and pays out a milestone |
 | `auto_evaluate(job_id)` | No | Trigger AI consensus evaluation (non-deterministic) |
 | `release_manually(job_id)` | No | Client manually releases payment to freelancer |
+| `resubmit_delivery(job_id, evidence_url, evidence_note)` | No | Freelancer resubmits after AI dispute (max 2 attempts) |
 | `send_message(job_id, content)` | No | Append a message to the job's chat thread |
 
 ### Read Methods (View)
@@ -450,6 +456,7 @@ After deployment, restart the dev server to pick up the new address.
 | `get_jobs_by_freelancer(address)` | JSON string | Jobs taken by address |
 | `get_messages(job_id)` | JSON string | Chat messages for a job |
 | `get_job_count()` | int | Total number of jobs ever posted |
+| `get_profile(address)` | JSON string | Freelancer reputation profile |
 
 ---
 
@@ -473,10 +480,35 @@ After deployment, restart the dev server to pick up the new address.
 
 ---
 
+## Deployed Contract
+
+### Bradbury Testnet
+
+| Field | Value |
+|---|---|
+| **Network** | GenLayer Bradbury Testnet |
+| **Chain ID** | 4221 |
+| **Contract Address** | [`0x26517582E3B1E89F55823ba217191321992D9592`](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592) |
+| **Explorer** | [View on Bradbury Explorer ↗](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592) |
+| **Contract Source** | [`contracts/arbiq.py`](./contracts/arbiq.py) |
+| **Runtime** | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` |
+
+### Verify on Explorer
+
+You can inspect all contract transactions, state, and AI consensus results at:
+
+```
+https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592
+```
+
+Each `auto_evaluate` transaction shows the full validator consensus trace — every validator independently runs the LLM and their votes are recorded on-chain.
+
+---
+
 ## Links
 
 - GitHub: [github.com/CodeWithShamim/Arbiq](https://github.com/CodeWithShamim/Arbiq)
 - Twitter / X: [@CodeWithShamim](https://x.com/CodeWithShamim)
-- GenLayer Explorer: [explorer-bradbury.genlayer.com](https://explorer-bradbury.genlayer.com)
+- **Contract on Explorer:** [explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)
 - GenLayer Docs: [docs.genlayer.com](https://docs.genlayer.com)
 - GenLayer Studio: [studio.genlayer.com](https://studio.genlayer.com)

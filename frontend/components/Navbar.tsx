@@ -7,6 +7,9 @@ import { useTheme } from "@/lib/theme-context";
 import { PlusCircle, Sun, Moon, ChevronDown, LogOut } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
 
+const CA = "0x26517582E3B1E89F55823ba217191321992D9592";
+const EXPLORER_URL = `https://explorer-bradbury.genlayer.com/address/${CA}`;
+
 const navLinks = [
   { href: "/",           label: "Home"      },
   { href: "/jobs",       label: "Jobs"      },
@@ -89,6 +92,34 @@ export function Navbar() {
           );
         })}
       </div>
+
+      {/* Contract address pill */}
+      <a
+        href={EXPLORER_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all duration-150 mr-2"
+        style={{
+          background: "rgba(124,58,237,0.08)",
+          border: "1px solid rgba(124,58,237,0.22)",
+          color: "#a78bfa",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.16)";
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.4)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.08)";
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.22)";
+        }}
+        title="View contract on Bradbury Explorer"
+      >
+        <span style={{ color: "var(--text-muted)", fontSize: 10 }}>CA</span>
+        {CA.slice(0, 6)}…{CA.slice(-4)}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ opacity: 0.5 }}>
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </a>
 
       {/* Right side */}
       <div className="flex items-center gap-2 ml-auto">
