@@ -50,6 +50,19 @@ export function JobCard({ job }: { job: Job }) {
         <div className="flex items-start justify-between gap-2 mb-3 relative z-10">
           <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge status={job.status} />
+            {job.has_milestones && (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: "rgba(167,139,250,0.15)",
+                  border: "1px solid rgba(167,139,250,0.3)",
+                  color: "#c4b5fd",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                MILESTONES
+              </span>
+            )}
             {isNew && (
               <span
                 className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"

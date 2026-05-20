@@ -2,11 +2,11 @@
 
 import { Navbar } from "@/components/Navbar";
 import { JobCard, JobCardSkeleton } from "@/components/JobCard";
-import { useGetAllJobs, useGetMyJobs } from "@/hooks/useArbiqContract";
+import { useGetAllJobs, useGetMyJobs, useGetProfile } from "@/hooks/useArbiqContract";
 import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { formatBudget } from "@/lib/utils";
-import { Briefcase, Wallet, AlertTriangle, TrendingUp, ArrowRight } from "lucide-react";
+import { Briefcase, Wallet, AlertTriangle, TrendingUp, ArrowRight, Star, ShieldCheck, ShieldX } from "lucide-react";
 import Link from "next/link";
 import { useCountUp } from "@/hooks/useCountUp";
 import { Footer } from "@/components/Footer";
@@ -92,6 +92,9 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* Reputation */}
+        <ReputationSection address={address} />
+
         {/* Two-column jobs */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <JobColumn
@@ -114,6 +117,81 @@ export default function DashboardPage() {
       </main>
       <Footer />
       <PostJobFAB />
+    </div>
+  );
+}
+
+function ReputationSection({ address }: { address: string | undefined }) {
+  const { data: profile } = useGetProfile(address);
+
+  if (!profile || (profile.jobs_completed === 0 && profile.jobs_disputed === 0)) return null;
+
+  const score = profile.reputation_score;
+  const scoreColor = score >= 80 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
+  const scoreLabel = score >= 80 ? "Trusted" : score >= 50 ? "Mixed" : "Risk";
+
+  return (
+    <div
+      className="mb-12 p-6 rounded-2xl"
+      style={{ background: "var(--glass-bg)", border: "1px solid var(--border-subtle)" }}
+    >
+      <div className="flex items-center gap-2 mb-5">
+        <Star className="w-4 h-4" style={{ color: "#a78bfa" }} />
+        <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-label)" }}>
+          Your Freelancer Reputation
+        </h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Score */}
+        <div className="space-y-1">
+          <p className="text-3xl font-black tabular-nums" style={{ color: scoreColor, fontFamily: '"JetBrains Mono", monospace' }}>
+            {score}%
+          </p>
+          <p className="text-xs font-bold" style={{ color: scoreColor }}>{scoreLabel}</p>
+          <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>reputation score</p>
+        </div>
+        {/* Completed */}
+        <div className="flex items-start gap-2">
+          <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#22c55e" }} />
+          <div>
+            <p className="text-2xl font-black" style={{ color: "var(--text-primary)", fontFamily: '"JetBrains Mono", monospace' }}>
+              {profile.jobs_completed}
+            </p>
+            <p className="text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>completed</p>
+          </div>
+        </div>
+        {/* Disputed */}
+        <div className="flex items-start gap-2">
+          <ShieldX className="w-4 h-4 mt-0.5 shrink-0" style={{ color: profile.jobs_disputed > 0 ? "#ef4444" : "var(--text-muted)" }} />
+          <div>
+            <p className="text-2xl font-black" style={{ color: "var(--text-primary)", fontFamily: '"JetBrains Mono", monospace' }}>
+              {profile.jobs_disputed}
+            </p>
+            <p className="text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>disputed</p>
+          </div>
+        </div>
+        {/* Earned */}
+        <div>
+          <p className="text-2xl font-black" style={{ color: "#a78bfa", fontFamily: '"JetBrains Mono", monospace' }}>
+            {formatBudget(profile.total_earned)}
+          </p>
+          <p className="text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>total earned</p>
+        </div>
+      </div>
+
+      {/* Score bar */}
+      <div className="mt-5 space-y-1.5">
+        <div className="flex justify-between text-[10px]" style={{ color: "var(--text-muted)" }}>
+          <span>Reputation progress</span>
+          <span>{score}/100</span>
+        </div>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${score}%`, background: `linear-gradient(90deg, ${scoreColor}aa, ${scoreColor})` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

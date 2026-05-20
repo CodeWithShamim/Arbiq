@@ -56,6 +56,30 @@ const FLAVOUR: Record<string, string[]> = {
     "Validators recording...",
     "Immutable storage confirmed...",
   ],
+  resubmit_delivery: [
+    "Uploading revised evidence...",
+    "Broadcasting resubmission...",
+    "Validators processing appeal...",
+    "Resetting to delivered state...",
+  ],
+  post_job_milestones: [
+    "Locking escrow with milestones...",
+    "Publishing milestone plan...",
+    "Validators recording job structure...",
+    "Awaiting consensus write...",
+  ],
+  submit_milestone_delivery: [
+    "Uploading milestone evidence...",
+    "Broadcasting to validators...",
+    "Milestone delivery recorded...",
+    "Awaiting finalization...",
+  ],
+  approve_milestone: [
+    "Broadcasting approval...",
+    "Releasing milestone payment...",
+    "Validators confirming transfer...",
+    "Updating milestone state...",
+  ],
   default: [
     "Broadcasting transaction...",
     "Validators deliberating...",
@@ -65,13 +89,17 @@ const FLAVOUR: Record<string, string[]> = {
 };
 
 const OP_LABEL: Record<string, string> = {
-  take_job:        "ACCEPT JOB",
-  submit_delivery: "SUBMIT DELIVERY",
-  auto_evaluate:   "AI EVALUATION",
-  release_manually:"MANUAL RELEASE",
-  post_job:        "POST JOB",
-  send_message:    "SEND MESSAGE",
-  default:         "TRANSACTION",
+  take_job:                 "ACCEPT JOB",
+  submit_delivery:          "SUBMIT DELIVERY",
+  auto_evaluate:            "AI EVALUATION",
+  release_manually:         "MANUAL RELEASE",
+  post_job:                 "POST JOB",
+  send_message:             "SEND MESSAGE",
+  resubmit_delivery:        "RESUBMIT DELIVERY",
+  post_job_milestones:      "POST JOB (MILESTONES)",
+  submit_milestone_delivery:"SUBMIT MILESTONE",
+  approve_milestone:        "APPROVE MILESTONE",
+  default:                  "TRANSACTION",
 };
 
 interface Props {

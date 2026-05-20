@@ -12,7 +12,11 @@ import {
   useSubmitDelivery,
   useAutoEvaluate,
   useRelease,
+  useResubmitDelivery,
 } from '@/hooks/useArbiqContract';
+import { ReputationBadge } from '@/components/ReputationBadge';
+import { MilestoneStepper } from '@/components/MilestoneStepper';
+import type { Job } from '@/lib/types';
 import { useAccount } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { truncateAddress, formatBudget, formatDeadline } from '@/lib/utils';
@@ -203,19 +207,22 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const [evidenceUrl, setEvidenceUrl] = useState('');
   const [evidenceNote, setEvidenceNote] = useState('');
+  const [resubmitUrl, setResubmitUrl] = useState('');
+  const [resubmitNote, setResubmitNote] = useState('');
 
   const { takeJob, txState: takeState, isLoading: takingJob } = useTakeJob();
   const { submitDelivery, txState: deliverState, isLoading: submitting } = useSubmitDelivery();
   const { autoEvaluate, txState: evalState, isLoading: evaluating } = useAutoEvaluate();
   const { release, txState: releaseState, isLoading: releasing } = useRelease();
+  const { resubmitDelivery, txState: resubmitState, isLoading: resubmitting } = useResubmitDelivery();
 
   useEffect(() => {
-    const states = [takeState, deliverState, evalState, releaseState];
+    const states = [takeState, deliverState, evalState, releaseState, resubmitState];
     if (states.some((s) => s.status === 'finalized')) setTimeout(() => refetch(), 3000);
     states.forEach((s) => {
       if (s.status === 'error' && s.error) toast.error(s.error);
     });
-  }, [takeState, deliverState, evalState, releaseState, refetch]);
+  }, [takeState, deliverState, evalState, releaseState, resubmitState, refetch]);
 
   if (isLoading)
     return (
@@ -271,6 +278,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       return;
     }
     submitDelivery(jobId, evidenceUrl, evidenceNote);
+  };
+
+  const handleResubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!resubmitUrl.trim()) {
+      toast.error('Evidence URL is required');
+      return;
+    }
+    resubmitDelivery(jobId, resubmitUrl, resubmitNote);
   };
 
   // Compute days since posting
@@ -346,14 +362,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               icon={<User className="w-3.5 h-3.5" />}
             />
             {job.freelancer ? (
-              <MetaItem
-                label="Freelancer"
-                value={truncateAddress(job.freelancer)}
-                fullValue={job.freelancer}
-                mono
-                copyable
-                icon={<Wallet className="w-3.5 h-3.5" />}
-              />
+              <div className="space-y-1.5">
+                <MetaItem
+                  label="Freelancer"
+                  value={truncateAddress(job.freelancer)}
+                  fullValue={job.freelancer}
+                  mono
+                  copyable
+                  icon={<Wallet className="w-3.5 h-3.5" />}
+                />
+                <ReputationBadge address={job.freelancer} showDetails />
+              </div>
             ) : job.created_at ? (
               <MetaItem
                 label="Posted"
@@ -459,9 +478,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </Section>
           )}
 
+          {/* ── ACTIVE + client (milestone progress) ── */}
+          {job.status === 'active' && isClient && job.has_milestones && (
+            <Section title="Milestone Progress" accent="#a78bfa">
+              <MilestoneStepper job={job} isClient={true} isFreelancer={false} />
+            </Section>
+          )}
+
           {/* ── ACTIVE + freelancer ── */}
           {job.status === 'active' && isFreelancer && (
-            <Section title="Submit Your Delivery" accent="#f59e0b">
+            <Section title={job.has_milestones ? 'Submit Milestone Deliveries' : 'Submit Your Delivery'} accent="#f59e0b">
+              {job.has_milestones ? (
+                <MilestoneStepper job={job} isClient={false} isFreelancer={true} />
+              ) : (
               <form onSubmit={handleDeliver} className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold" style={{ color: 'var(--text-label)' }}>
@@ -512,6 +541,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   operation="submit_delivery"
                 />
               </form>
+              )}
             </Section>
           )}
 
@@ -558,6 +588,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
               {isClient && (
                 <Section title="Review & Decide">
+                  {job.has_milestones ? (
+                    <MilestoneStepper job={job} isClient={true} isFreelancer={false} />
+                  ) : (
                   <div className="space-y-4">
                     {/* AI evaluate */}
                     <div
@@ -659,6 +692,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       />
                     </div>
                   </div>
+                  )}
                 </Section>
               )}
 
@@ -705,6 +739,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                     {job.ai_reasoning}
                   </p>
+                  <AiScoreBars scores={job.ai_scores} confidence={job.ai_confidence} accentColor="rgba(34,197,94,0.5)" />
                 </div>
               )}
             </div>
@@ -726,8 +761,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 AI Rejected — Disputed
               </div>
               <p className="text-xs leading-relaxed" style={{ color: 'rgba(239,68,68,0.65)' }}>
-                The AI evaluated the evidence and found it insufficient for the job spec. Funds
-                remain locked. Re-evaluate with better evidence when available.
+                The AI evaluated the evidence and found it insufficient for the job spec.
+                {isFreelancer && (job.resubmit_count ?? 0) < 2
+                  ? ' You can resubmit with stronger evidence below.'
+                  : ' Funds remain locked.'}
               </p>
               {job.ai_reasoning && (
                 <div className="pt-3" style={{ borderTop: '1px solid rgba(239,68,68,0.12)' }}>
@@ -740,19 +777,58 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                     {job.ai_reasoning}
                   </p>
+                  <AiScoreBars scores={job.ai_scores} confidence={job.ai_confidence} accentColor="rgba(239,68,68,0.5)" />
                 </div>
               )}
-              <button
-                disabled
-                className="w-full py-2.5 rounded-xl text-sm font-semibold mt-2 opacity-40 cursor-not-allowed"
-                style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#fca5a5',
-                }}
-              >
-                Appeal — Coming Soon
-              </button>
+
+              {/* Resubmit form for freelancer */}
+              {isFreelancer && (job.resubmit_count ?? 0) < 2 && (
+                <form
+                  onSubmit={handleResubmit}
+                  className="space-y-3 pt-3"
+                  style={{ borderTop: '1px solid rgba(239,68,68,0.12)' }}
+                >
+                  <p className="text-xs font-semibold" style={{ color: '#fca5a5' }}>
+                    Resubmit with stronger evidence
+                    <span className="ml-1.5 font-normal opacity-60">
+                      ({2 - (job.resubmit_count ?? 0)} attempt{2 - (job.resubmit_count ?? 0) !== 1 ? 's' : ''} remaining)
+                    </span>
+                  </p>
+                  <Input
+                    type="url"
+                    placeholder="https://github.com/you/improved-project"
+                    value={resubmitUrl}
+                    onChange={(e) => setResubmitUrl(e.target.value)}
+                    disabled={resubmitting}
+                  />
+                  <EvidencePreview url={resubmitUrl} jobTitle={job.title} jobDescription={job.description} />
+                  <Textarea
+                    rows={3}
+                    placeholder="Explain what you improved and how it now meets the requirements…"
+                    value={resubmitNote}
+                    onChange={(e) => setResubmitNote(e.target.value)}
+                    disabled={resubmitting}
+                  />
+                  <ActionButton
+                    type="submit"
+                    loading={resubmitting}
+                    label="Resubmit for Review"
+                    loadingLabel="Resubmitting…"
+                  />
+                  <TxHudOverlay
+                    status={resubmitState.status}
+                    consensusStatus={resubmitState.consensusStatus}
+                    txHash={resubmitState.txHash}
+                    error={resubmitState.error}
+                    operation="resubmit_delivery"
+                  />
+                </form>
+              )}
+              {isFreelancer && (job.resubmit_count ?? 0) >= 2 && (
+                <p className="text-xs pt-2" style={{ color: 'rgba(239,68,68,0.45)' }}>
+                  Maximum resubmits reached. No further appeals allowed.
+                </p>
+              )}
             </div>
           )}
 
@@ -773,6 +849,54 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function AiScoreBars({
+  scores,
+  confidence,
+  accentColor,
+}: {
+  scores: Job['ai_scores'];
+  confidence?: string;
+  accentColor: string;
+}) {
+  if (!scores) return null;
+  const criteria: { key: keyof NonNullable<Job['ai_scores']>; label: string }[] = [
+    { key: 'relevance',    label: 'Relevance'    },
+    { key: 'completeness', label: 'Completeness' },
+    { key: 'quality',      label: 'Quality'      },
+    { key: 'meets_spec',   label: 'Meets Spec'   },
+    { key: 'professional', label: 'Professional' },
+  ];
+  return (
+    <div className="space-y-2 pt-3" style={{ borderTop: `1px solid ${accentColor}` }}>
+      <p className="text-[10px] uppercase font-bold tracking-widest mb-3" style={{ color: accentColor }}>
+        AI Rubric Scores
+      </p>
+      {criteria.map(({ key, label }) => {
+        const score = scores[key] ?? 0;
+        const pct = (score / 10) * 100;
+        const color = score >= 7 ? '#22c55e' : score >= 5 ? '#f59e0b' : '#ef4444';
+        return (
+          <div key={key} className="flex items-center gap-3">
+            <span className="text-[11px] w-24 shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${pct}%`, background: color, boxShadow: `0 0 4px ${color}66` }}
+              />
+            </div>
+            <span className="text-[11px] font-mono w-5 text-right font-bold" style={{ color }}>{score}</span>
+          </div>
+        );
+      })}
+      {confidence && (
+        <p className="text-[10px] pt-1" style={{ color: accentColor }}>
+          Confidence: <span className="font-semibold">{confidence}</span>
+        </p>
+      )}
+    </div>
+  );
+}
 
 function MetaItem({
   label,

@@ -15,7 +15,7 @@ import {
   readContract,
   invalidateReadCache,
 } from "@/lib/genlayer/client";
-import type { Job } from "@/lib/types";
+import type { Job, FreelancerProfile } from "@/lib/types";
 import { useError } from "@/lib/error-context";
 import { friendlyError } from "@/lib/errors";
 
@@ -33,7 +33,12 @@ function parseJobJson(raw: unknown): Job | null {
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (!parsed || typeof parsed !== "object") return null;
-    return parsed as Job;
+    // Normalise ai_scores from JSON string (how contract stores it) to object
+    const p = parsed as Record<string, unknown>;
+    if (typeof p.ai_scores === "string") {
+      try { p.ai_scores = JSON.parse(p.ai_scores as string); } catch { p.ai_scores = undefined; }
+    }
+    return p as unknown as Job;
   } catch {
     return null;
   }
@@ -414,6 +419,122 @@ export function useSendMessage() {
     sendMessage,
     txState,
     reset,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+// ─── Reputation hook ──────────────────────────────────────────────────────────
+
+export function useGetProfile(address: string | undefined) {
+  return useQuery({
+    queryKey: ["arbiq", "profile", address],
+    queryFn: async () => {
+      if (!address) return null;
+      const raw = await readContract("get_profile", [address]);
+      try {
+        const p = typeof raw === "string" ? JSON.parse(raw) : raw;
+        return p as FreelancerProfile;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!address,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+// ─── Appeal hook ──────────────────────────────────────────────────────────────
+
+export function useResubmitDelivery() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const resubmitDelivery = useCallback(
+    (jobId: number, evidenceUrl: string, evidenceNote: string) =>
+      send({
+        functionName: "resubmit_delivery",
+        args: [jobId, evidenceUrl, evidenceNote],
+      }),
+    [send]
+  );
+
+  return {
+    resubmitDelivery,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+// ─── Milestone hooks ──────────────────────────────────────────────────────────
+
+export function usePostJobMilestones() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const postJobMilestones = useCallback(
+    (params: {
+      title: string;
+      description: string;
+      deadline: string;
+      budgetEth: string;
+      milestoneTitles: string[];
+    }) =>
+      send({
+        functionName: "post_job_milestones",
+        args: [params.title, params.description, params.deadline, params.milestoneTitles],
+        value: parseEther(params.budgetEth),
+      }),
+    [send]
+  );
+
+  return {
+    postJobMilestones,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+export function useSubmitMilestoneDelivery() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const submitMilestoneDelivery = useCallback(
+    (jobId: number, milestoneIdx: number, evidenceUrl: string, evidenceNote: string) =>
+      send({
+        functionName: "submit_milestone_delivery",
+        args: [jobId, milestoneIdx, evidenceUrl, evidenceNote],
+      }),
+    [send]
+  );
+
+  return {
+    submitMilestoneDelivery,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+export function useApproveMilestone() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const approveMilestone = useCallback(
+    (jobId: number, milestoneIdx: number) =>
+      send({
+        functionName: "approve_milestone",
+        args: [jobId, milestoneIdx],
+      }),
+    [send]
+  );
+
+  return {
+    approveMilestone,
+    txState,
+    reset,
+    isConnected,
     isLoading: txState.status === "pending" || txState.status === "finalizing",
   };
 }
