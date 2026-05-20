@@ -32,11 +32,166 @@ import {
   Check,
   Share2,
 } from 'lucide-react';
-import { ConsensusTxStatus } from '@/components/ConsensusTxStatus';
+import { TxHudOverlay } from '@/components/TxHudOverlay';
 import { JobChat } from '@/components/JobChat';
 import { EvidencePreview } from '@/components/EvidencePreview';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';
+
+function JobHudLoader({ jobId }: { jobId: number }) {
+  const [pct, setPct] = useState(0);
+  const [scanY, setScanY] = useState(0);
+  const [msgIdx, setMsgIdx] = useState(0);
+  const [block, setBlock] = useState(4821094 + Math.floor(Math.random() * 100));
+  const [blink, setBlink] = useState(true);
+
+  const MSGS = [
+    'FETCHING CASE FILE...',
+    'QUERYING BLOCKCHAIN...',
+    'DECRYPTING JOB DATA...',
+    'SYNCING VALIDATORS...',
+    'LOADING EVIDENCE...',
+  ];
+
+  useEffect(() => {
+    const bar = setInterval(() => setPct((p) => Math.min(p + 1.1, 95)), 40);
+    const scan = setInterval(() => setScanY((y) => (y + 1.8) % 100), 16);
+    const msg = setInterval(() => setMsgIdx((i) => (i + 1) % MSGS.length), 900);
+    const blk = setInterval(() => setBlock((b) => b + 1), 2000);
+    const blinkI = setInterval(() => setBlink((b) => !b), 600);
+    return () => { clearInterval(bar); clearInterval(scan); clearInterval(msg); clearInterval(blk); clearInterval(blinkI); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        maxWidth: 480,
+        fontFamily: '"JetBrains Mono", monospace',
+        color: '#00f0ff',
+        position: 'relative',
+      }}
+    >
+      {/* Corner brackets */}
+      {[
+        { top: 0, left: 0, borderTop: '2px solid #00f0ff', borderLeft: '2px solid #00f0ff', width: 20, height: 20 },
+        { top: 0, right: 0, borderTop: '2px solid #00f0ff', borderRight: '2px solid #00f0ff', width: 20, height: 20 },
+        { bottom: 0, left: 0, borderBottom: '2px solid #00f0ff', borderLeft: '2px solid #00f0ff', width: 20, height: 20 },
+        { bottom: 0, right: 0, borderBottom: '2px solid #00f0ff', borderRight: '2px solid #00f0ff', width: 20, height: 20 },
+      ].map((s, i) => (
+        <div key={i} style={{ position: 'absolute', ...s }} />
+      ))}
+
+      <div style={{ padding: '28px 32px', overflow: 'hidden', position: 'relative' }}>
+        {/* Scan line */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: `${scanY}%`,
+            height: 2,
+            background: 'linear-gradient(90deg, transparent, #00f0ff88, #00f0ff, #00f0ff88, transparent)',
+            boxShadow: '0 0 12px #00f0ff, 0 0 24px #00f0ff44',
+            pointerEvents: 'none',
+            zIndex: 10,
+          }}
+        />
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <div style={{ width: 8, height: 8, background: '#00f0ff', borderRadius: '50%', boxShadow: '0 0 8px #00f0ff', opacity: blink ? 1 : 0.2, transition: 'opacity 0.15s' }} />
+          <span style={{ fontSize: 11, letterSpacing: '0.25em', fontWeight: 700 }}>
+            {MSGS[msgIdx]}
+          </span>
+        </div>
+
+        {/* Case ID */}
+        <div style={{ fontSize: 10, color: 'rgba(0,240,255,0.5)', letterSpacing: '0.15em', marginBottom: 4 }}>CASE ID</div>
+        <div style={{ fontSize: 22, fontFamily: '"Bebas Neue", sans-serif', letterSpacing: '0.1em', color: '#00f0ff', textShadow: '0 0 20px #00f0ff88', marginBottom: 20 }}>
+          #{String(jobId).padStart(6, '0')}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'rgba(0,240,255,0.5)', marginBottom: 4, letterSpacing: '0.12em' }}>
+            <span>DATA INTEGRITY</span>
+            <span>{Math.floor(pct)}%</span>
+          </div>
+          <div style={{ height: 3, background: 'rgba(0,240,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${pct}%`,
+                background: 'linear-gradient(90deg, #00f0ff, #00ff88)',
+                boxShadow: '0 0 8px #00f0ff',
+                borderRadius: 2,
+                transition: 'width 0.04s linear',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Block fill dots */}
+        <div style={{ display: 'flex', gap: 3, marginBottom: 24 }}>
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: 4,
+                borderRadius: 1,
+                background: i < Math.floor(pct / 5) ? '#00f0ff' : 'rgba(0,240,255,0.1)',
+                boxShadow: i < Math.floor(pct / 5) ? '0 0 4px #00f0ff' : undefined,
+                transition: 'background 0.2s',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Live stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
+          {[
+            { label: 'BLOCK', value: `#${block.toLocaleString()}` },
+            { label: 'VALIDATORS', value: '5 / 5 ONLINE' },
+            { label: 'NETWORK', value: 'GENLAYER BRADBURY' },
+            { label: 'STATUS', value: 'SYNCING...' },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <div style={{ fontSize: 8, color: 'rgba(0,240,255,0.4)', letterSpacing: '0.15em', marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: 10, color: '#00f0ff', fontWeight: 700 }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Separator */}
+        <div style={{ height: 1, background: 'rgba(0,240,255,0.12)', margin: '20px 0' }} />
+
+        {/* Bottom status row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 9, color: 'rgba(0,240,255,0.4)', letterSpacing: '0.12em' }}>
+          <span>ARBIQ PROTOCOL v2.4.1</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                style={{
+                  display: 'inline-block',
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: '#00f0ff',
+                  opacity: blink && i === msgIdx % 3 ? 1 : 0.2,
+                  transition: 'opacity 0.15s',
+                }}
+              />
+            ))}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -66,17 +221,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     return (
       <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
         <Navbar />
-        <main className="pt-32 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative w-12 h-12">
-              <div className="orbit-dot" />
-              <div className="orbit-dot" />
-              <div className="orbit-dot" />
-            </div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Loading job…
-            </p>
-          </div>
+        <main className="pt-32 flex items-center justify-center px-4">
+          <JobHudLoader jobId={jobId} />
         </main>
       </div>
     );
@@ -289,10 +435,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     label="Accept & Start Working"
                     loadingLabel="Accepting…"
                   />
-                  <ConsensusTxStatus
+                  <TxHudOverlay
                     status={takeState.status}
+                    consensusStatus={takeState.consensusStatus}
                     txHash={takeState.txHash}
                     error={takeState.error}
+                    operation={takeState.operation ?? "take_job"}
                   />
                 </div>
               ) : (
@@ -356,10 +504,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   label="Submit Delivery"
                   loadingLabel="Submitting…"
                 />
-                <ConsensusTxStatus
+                <TxHudOverlay
                   status={deliverState.status}
+                  consensusStatus={deliverState.consensusStatus}
                   txHash={deliverState.txHash}
                   error={deliverState.error}
+                  operation={deliverState.operation ?? "submit_delivery"}
                 />
               </form>
             </Section>
@@ -441,11 +591,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         Typical evaluation time: 1–5 minutes. You&apos;ll see live validator
                         progress below.
                       </p>
-                      <ConsensusTxStatus
+                      <TxHudOverlay
                         status={evalState.status}
+                        consensusStatus={evalState.consensusStatus}
                         txHash={evalState.txHash}
                         error={evalState.error}
-                        finalizingLabel="AI validators reading evidence & reaching consensus…"
+                        operation={evalState.operation ?? "auto_evaluate"}
                       />
                     </div>
 
@@ -499,10 +650,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                           </>
                         )}
                       </button>
-                      <ConsensusTxStatus
+                      <TxHudOverlay
                         status={releaseState.status}
+                        consensusStatus={releaseState.consensusStatus}
                         txHash={releaseState.txHash}
                         error={releaseState.error}
+                        operation={releaseState.operation ?? "release_manually"}
                       />
                     </div>
                   </div>

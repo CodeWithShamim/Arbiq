@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGetMessages, useSendMessage, type ChatMessage } from "@/hooks/useArbiqContract";
 import { Send, MessageSquare, Loader2, Lock } from "lucide-react";
+import { TxHudOverlay } from "@/components/TxHudOverlay";
 
 interface Props {
   jobId: number;
@@ -265,17 +266,17 @@ export function JobChat({ jobId, address, clientAddress, freelancerAddress: _ }:
         <div ref={bottomRef} />
       </div>
 
-      {/* Error banner */}
-      {txState.status === "error" && txState.error && (
-        <div
-          className="px-4 py-2 text-xs font-medium"
-          style={{
-            background: "rgba(239,68,68,0.08)",
-            borderTop: "1px solid rgba(239,68,68,0.18)",
-            color: "#f87171",
-          }}
-        >
-          {txState.error}
+      {/* HUD overlay while sending — shown in a compact bar above the input */}
+      {txState.status !== "idle" && (
+        <div style={{ padding: "0 12px 4px", flexShrink: 0 }}>
+          <TxHudOverlay
+            status={txState.status}
+            consensusStatus={txState.consensusStatus}
+            txHash={txState.txHash}
+            error={txState.error}
+            operation="send_message"
+            onDismiss={reset}
+          />
         </div>
       )}
 

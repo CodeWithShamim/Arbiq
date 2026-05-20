@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "@rainbow-me/rainbowkit/styles.css";
 import { Providers, WrongNetworkBanner } from "./providers";
-import { Cursor } from "@/components/Cursor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ErrorProvider } from "@/lib/error-context";
+import { BootLoader } from "@/components/animations/BootLoader";
+import { GameCursor } from "@/components/animations/GameCursor";
+import { PageTransition } from "@/components/animations/PageTransition";
+import { DataFloats } from "@/components/animations/DataFloats";
+import { NetworkWidget } from "@/components/animations/NetworkWidget";
+import { ScrollProgress } from "@/components/animations/ScrollProgress";
+import { KonamiEaster } from "@/components/animations/KonamiEaster";
 
 export const metadata: Metadata = {
   title: "Arbiq — Trustless Freelance on GenLayer",
@@ -24,7 +30,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <Cursor />
+        <GameCursor />
+        <BootLoader />
+        <PageTransition />
+        <DataFloats />
+        <NetworkWidget />
+        <ScrollProgress />
+        <KonamiEaster />
         <Providers>
           <ErrorBoundary>
             <ErrorProvider>

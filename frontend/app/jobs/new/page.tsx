@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, Lock, Info } from "lucide-react";
-import { ConsensusTxStatus } from "@/components/ConsensusTxStatus";
+import { TxHudOverlay } from "@/components/TxHudOverlay";
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -192,11 +192,12 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
             )}
 
             {/* Live consensus status */}
-            <ConsensusTxStatus
+            <TxHudOverlay
               status={txState.status}
+              consensusStatus={txState.consensusStatus}
               txHash={txState.txHash}
               error={txState.error}
-              finalizingLabel="Validators confirming job & locking escrow…"
+              operation={txState.operation ?? "post_job"}
             />
 
             {/* Submit */}
