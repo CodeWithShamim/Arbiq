@@ -271,7 +271,7 @@ export function JobChat({ jobId, address, clientAddress, freelancerAddress: _ }:
         <div style={{ padding: "0 12px 4px", flexShrink: 0 }}>
           <TxHudOverlay
             status={txState.status}
-            consensusStatus={null}
+            consensusStatus={txState.consensusStatus}
             txHash={txState.txHash}
             error={txState.error}
             operation="send_message"

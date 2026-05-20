@@ -437,7 +437,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   />
                   <TxHudOverlay
                     status={takeState.status}
-                    consensusStatus={null}
+                    consensusStatus={takeState.consensusStatus}
                     txHash={takeState.txHash}
                     error={takeState.error}
                     operation="take_job"
@@ -506,7 +506,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 />
                 <TxHudOverlay
                   status={deliverState.status}
-                  consensusStatus={null}
+                  consensusStatus={deliverState.consensusStatus}
                   txHash={deliverState.txHash}
                   error={deliverState.error}
                   operation="submit_delivery"
@@ -593,7 +593,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       </p>
                       <TxHudOverlay
                         status={evalState.status}
-                        consensusStatus={null}
+                        consensusStatus={evalState.consensusStatus}
                         txHash={evalState.txHash}
                         error={evalState.error}
                         operation="auto_evaluate"
@@ -652,7 +652,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       </button>
                       <TxHudOverlay
                         status={releaseState.status}
-                        consensusStatus={null}
+                        consensusStatus={releaseState.consensusStatus}
                         txHash={releaseState.txHash}
                         error={releaseState.error}
                         operation="release_manually"

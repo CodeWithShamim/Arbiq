@@ -194,7 +194,7 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
             {/* Live consensus status */}
             <TxHudOverlay
               status={txState.status}
-              consensusStatus={null}
+              consensusStatus={txState.consensusStatus}
               txHash={txState.txHash}
               error={txState.error}
               operation="post_job"
