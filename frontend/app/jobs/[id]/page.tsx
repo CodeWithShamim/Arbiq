@@ -437,10 +437,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   />
                   <TxHudOverlay
                     status={takeState.status}
-                    consensusStatus={takeState.consensusStatus}
+                    consensusStatus={null}
                     txHash={takeState.txHash}
                     error={takeState.error}
-                    operation={takeState.operation ?? "take_job"}
+                    operation="take_job"
                   />
                 </div>
               ) : (
@@ -506,10 +506,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 />
                 <TxHudOverlay
                   status={deliverState.status}
-                  consensusStatus={deliverState.consensusStatus}
+                  consensusStatus={null}
                   txHash={deliverState.txHash}
                   error={deliverState.error}
-                  operation={deliverState.operation ?? "submit_delivery"}
+                  operation="submit_delivery"
                 />
               </form>
             </Section>
@@ -593,10 +593,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       </p>
                       <TxHudOverlay
                         status={evalState.status}
-                        consensusStatus={evalState.consensusStatus}
+                        consensusStatus={null}
                         txHash={evalState.txHash}
                         error={evalState.error}
-                        operation={evalState.operation ?? "auto_evaluate"}
+                        operation="auto_evaluate"
                       />
                     </div>
 
@@ -652,10 +652,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       </button>
                       <TxHudOverlay
                         status={releaseState.status}
-                        consensusStatus={releaseState.consensusStatus}
+                        consensusStatus={null}
                         txHash={releaseState.txHash}
                         error={releaseState.error}
-                        operation={releaseState.operation ?? "release_manually"}
+                        operation="release_manually"
                       />
                     </div>
                   </div>

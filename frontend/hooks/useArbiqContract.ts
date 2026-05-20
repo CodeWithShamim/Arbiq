@@ -106,8 +106,6 @@ interface TxState {
   // Decoded return value from the leader receipt (e.g. job_id for post_job)
   returnValue: unknown | null;
   error: string | null;
-  // The contract function name that was called — used by TxHudOverlay for context
-  operation: string | null;
 }
 
 function useContractWrite() {
@@ -122,11 +120,10 @@ function useContractWrite() {
     consensusStatus: null,
     returnValue: null,
     error: null,
-    operation: null,
   });
 
   const reset = useCallback(() => {
-    setTxState({ txHash: null, status: "idle", consensusStatus: null, returnValue: null, error: null, operation: null });
+    setTxState({ txHash: null, status: "idle", consensusStatus: null, returnValue: null, error: null });
   }, []);
 
   const pollStatus = useCallback(
@@ -198,7 +195,7 @@ function useContractWrite() {
         return null;
       }
 
-      setTxState({ txHash: null, status: "pending", consensusStatus: null, returnValue: null, error: null, operation: functionName });
+      setTxState({ txHash: null, status: "pending", consensusStatus: null, returnValue: null, error: null });
       txInFlight = true;
 
       try {
@@ -234,7 +231,7 @@ function useContractWrite() {
       } catch (err: unknown) {
         txInFlight = false;
         const msg = friendlyError(err);
-        setTxState({ txHash: null, status: "error", consensusStatus: null, returnValue: null, error: msg, operation: functionName });
+        setTxState({ txHash: null, status: "error", consensusStatus: null, returnValue: null, error: msg });
         showError(err);
         return null;
       }
