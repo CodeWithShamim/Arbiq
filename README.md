@@ -1,6 +1,8 @@
 # Arbiq — AI-Enforced Freelance Marketplace on GenLayer
 
-Arbiq is a decentralized freelance escrow platform where payment disputes are resolved autonomously by an AI judge running on the [GenLayer](https://genlayer.com) blockchain. Clients lock GEN tokens in escrow when posting a job; when a freelancer submits their delivery, the client can trigger an on-chain AI evaluation — multiple GenLayer validator nodes independently fetch and read the evidence URL, reach consensus on whether the work satisfies the job spec, and automatically release or withhold payment. No central arbitrator. No appeals process needed.
+![genvm-lint](https://img.shields.io/badge/genvm--lint-passing-brightgreen) ![GenLayer](https://img.shields.io/badge/GenLayer-Bradbury%20Testnet-blue) ![contract](https://img.shields.io/badge/contract-0x2651...9592-orange)
+
+Arbiq is a decentralized freelance escrow platform where payment disputes are resolved autonomously by an AI judge running on the [GenLayer](https://genlayer.com) blockchain. Clients lock GEN tokens in escrow when posting a job; when a freelancer submits their delivery, the client can trigger an on-chain AI evaluation — multiple GenLayer validator nodes independently **fetch and read the evidence URL** using `gl.get_webpage()`, run an LLM prompt to score the work against the job spec, reach strict consensus via `gl.eq_principle.strict_eq`, and automatically release or withhold payment. No central arbitrator. No appeals process needed.
 
 > **Live network:** GenLayer Bradbury Testnet (Chain ID 4221)
 > **Contract address:** [`0x26517582E3B1E89F55823ba217191321992D9592`](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)
@@ -32,7 +34,7 @@ Arbiq is a decentralized freelance escrow platform where payment disputes are re
 | Feature | Description |
 |---|---|
 | **Escrow posting** | Client sends GEN with the job post; funds are held in the contract |
-| **AI evaluation** | GenLayer validators run an LLM prompt against the job spec + evidence URL and reach strict consensus |
+| **AI evaluation** | Validators fetch the evidence URL via `gl.get_webpage()`, run an LLM scoring prompt, and reach strict consensus via `gl.eq_principle.strict_eq` |
 | **Manual release** | Client can bypass AI and approve payment directly |
 | **On-chain chat** | Client and freelancer can message each other; messages stored in a `TreeMap` on-chain |
 | **Live notifications** | Polls chain state every 15 s, fires in-app toasts on job status transitions |

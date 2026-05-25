@@ -255,6 +255,13 @@ class Arbiq(gl.Contract):
         freelancer_hex = job["freelancer"]
 
         def evaluate() -> str:
+            # Fetch the actual evidence URL so validators read the real content
+            try:
+                evidence_content = gl.get_webpage(evidence_url, mode="text")
+                evidence_content = evidence_content[:3000] if evidence_content else ""
+            except Exception:
+                evidence_content = ""
+
             prompt = f"""You are an impartial AI judge for a freelance escrow payment system.
 
 JOB DETAILS:
@@ -265,11 +272,13 @@ JOB DETAILS:
 FREELANCER SUBMISSION:
 - Evidence URL: {evidence_url}
 - Freelancer note: {evidence_note or "(none provided)"}
+- Evidence content (fetched from URL):
+{evidence_content or "(could not fetch URL content)"}
 
 Score the submission on these 5 criteria, each from 0 to 10:
-1. Relevance (0-10): Does the evidence URL and note relate to the job domain?
+1. Relevance (0-10): Does the evidence content relate to the job domain?
 2. Completeness (0-10): Are all deliverables described in the job spec addressed?
-3. Quality (0-10): Does the evidence suggest professional, working output?
+3. Quality (0-10): Does the evidence show professional, working output?
 4. Meets Spec (0-10): Does the submission satisfy the explicit requirements word-for-word?
 5. Professional (0-10): Is the presentation, documentation, and delivery professional?
 
