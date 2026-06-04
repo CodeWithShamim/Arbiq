@@ -22,6 +22,7 @@ Arbiq is a decentralized freelance escrow platform where payment disputes are re
 - [Notification System](#notification-system)
 - [On-Chain Chat](#on-chain-chat)
 - [Getting Started](#getting-started)
+- [Testing & Quality Checks](#testing--quality-checks)
 - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
 - [Contract Reference](#contract-reference)
@@ -110,8 +111,8 @@ arbiq-freelance/
 │   └── deployScript.ts           # Legacy deploy script
 │
 ├── test/
-│   ├── test_arbiq.py             # pytest unit tests (mock GenLayer runtime)
-│   └── mock_genlayer.py          # Mock gl.* primitives for local testing
+│   ├── test_arbiq.py             # 105 unit tests — gltest direct mode (real GenVM SDK)
+│   └── mock_genlayer.py          # Compatibility shim (no longer active)
 │
 ├── frontend/                     # Next.js application (npm workspace)
 │   │
@@ -387,12 +388,82 @@ npm run dev
 # → http://localhost:3000
 ```
 
-### Run contract tests
+---
+
+## Testing & Quality Checks
+
+### Run everything at once
 
 ```bash
-npm test
-# runs pytest test/test_arbiq.py -v
+npm run check
+# 1. genvm-lint — AST safety checks on contracts/arbiq.py
+# 2. gltest    — 105 unit tests via gltest direct mode
 ```
+
+Both steps must pass. The lint runs first and fails fast so you don't wait for tests on a broken contract.
+
+### Individual commands
+
+```bash
+# Fast AST lint only (no SDK download needed, ~0.1s)
+npm run lint
+
+# Full test suite — 105 tests, real GenVM SDK, ~2s
+npm test
+```
+
+### Test suite overview
+
+Tests live in `test/test_arbiq.py` and run with **gltest direct mode** — the real `genlayer-py-std` SDK is loaded locally from a GitHub release cache. No testnet connection required.
+
+| Class | Tests | What's covered |
+|---|---|---|
+| `TestPostJob` | 11 | Validation, field defaults, whitespace stripping |
+| `TestPostJobMilestones` | 9 | Budget splitting, remainder, title stripping, min/max guards |
+| `TestTakeJob` | 6 | Happy path, self-take, double-take, nonexistent job |
+| `TestSubmitDelivery` | 7 | Happy path, unauthorized, open job, empty/whitespace URL |
+| `TestSubmitMilestoneDelivery` | 9 | Happy path, guards, invalid index, non-milestone job |
+| `TestApproveMilestone` | 9 | Single approval + payment, all-approved completion, guards, profile update |
+| `TestAutoEvaluate` | 15 | Approve/reject, score avg logic, avg=6 boundary, AI JSON parsing, profile updates |
+| `TestReleaseManually` | 6 | Payment release, guards, reasoning field, profile update |
+| `TestResubmitDelivery` | 6 | Resubmit, field clearing, max-2 cap, guards |
+| `TestMessaging` | 8 | Client/freelancer send, accumulation, 500-char truncation, open-job guard |
+| `TestGetProfile` | 5 | Defaults, completion/dispute updates, mixed reputation score |
+| `TestViewMethods` | 9 | All view helpers, case-insensitive filtering |
+| `TestFullLifecycle` | 6 | End-to-end: AI approval, manual release, dispute→resubmit→approve, milestones |
+| **Total** | **105** | |
+
+### How AI / web mocks work
+
+`auto_evaluate` calls `gl.nondet.exec_prompt` and `gl.get_webpage`. In tests these are intercepted by the VM mock layer:
+
+```python
+# Mock LLM response
+direct_vm.mock_llm(".*", json.dumps({
+    "approved": True,
+    "reasoning": "Work looks good.",
+    "scores": {"relevance": 8, "completeness": 8, "quality": 8, "meets_spec": 8, "professional": 8},
+    "confidence": "high",
+}))
+
+# Mock URL fetch
+direct_vm.mock_web(".*github.*", {"method": "GET", "status": 200, "body": "# Project\nDone."})
+
+contract.auto_evaluate(job_id)
+```
+
+Patterns are regex — `".*"` matches any prompt/URL. Call `direct_vm.clear_mocks()` between phases if the same test needs different responses.
+
+### Score-based approval logic
+
+The contract ignores the `"approved"` field from the LLM and recomputes it from the 5 numeric scores:
+
+```
+avg = (relevance + completeness + quality + meets_spec + professional) / 5
+approved = avg >= 6.0
+```
+
+Tests cover: avg = 4.6 → disputed, avg = 6.0 → completed, avg = 8.0 → completed.
 
 ---
 
@@ -477,7 +548,8 @@ After deployment, restart the dev server to pick up the new address.
 | Server state | TanStack Query v5 |
 | Notifications | sonner (toast library) |
 | UI primitives | Radix UI (Dialog, Select, Label, Tooltip) · lucide-react |
-| Contract testing | pytest · mock GenLayer runtime |
+| Contract testing | gltest direct mode · real genlayer-py-std SDK · 105 tests |
+| Contract linting | genvm-lint (AST safety checks) |
 | Linting / types | TypeScript strict · ESLint · Pyright |
 
 ---

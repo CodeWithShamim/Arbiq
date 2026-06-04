@@ -30,6 +30,7 @@ import {
   Circle,
   CheckCircle,
   Hourglass,
+  FlaskConical,
 } from "lucide-react";
 
 /* ─── Section registry ────────────────────────────────────────────────────── */
@@ -40,8 +41,9 @@ const SECTIONS = [
   { id: "architecture",   label: "Architecture",         icon: Layers     },
   { id: "contract",       label: "Smart Contract",       icon: Code2      },
   { id: "job-lifecycle",  label: "Job Lifecycle",        icon: GitBranch  },
-  { id: "ai-evaluation",  label: "AI Evaluation",        icon: Brain      },
-  { id: "wallet",         label: "Wallet & Network",     icon: Wallet     },
+  { id: "ai-evaluation",  label: "AI Evaluation",        icon: Brain         },
+  { id: "testing",        label: "Testing",              icon: FlaskConical  },
+  { id: "wallet",         label: "Wallet & Network",     icon: Wallet        },
   { id: "notifications",  label: "Notifications",        icon: Bell       },
   { id: "chat",           label: "On-Chain Chat",        icon: MessageSquare },
   { id: "hooks",          label: "Hooks Reference",      icon: Package    },
@@ -876,6 +878,144 @@ result_str = gl.eq_principle.strict_eq(evaluate)
             AI evaluation typically takes <strong style={{ color: "#fbbf24" }}>1–5 minutes</strong> because each
             validator independently calls an LLM and they must all agree. The UI polls every second and shows live
             phase progress. Other contract writes (take job, submit delivery) finalize in 15–45 seconds.
+          </Callout>
+
+          {/* ── TESTING ───────────────────────────────────────────────────── */}
+          <SectionHead
+            id="testing"
+            icon={FlaskConical}
+            accent="#22c55e"
+            label="Quality Assurance"
+            title="TESTING"
+            sub="105 unit tests using the real GenVM SDK — no testnet needed."
+          />
+
+          <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--text-secondary)" }}>
+            The contract ships with a full test suite using{" "}
+            <strong style={{ color: "var(--text-primary)" }}>gltest direct mode</strong> — the official GenLayer test
+            runner that loads the real <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}>genlayer-py-std</code>{" "}
+            SDK locally from a GitHub release cache. Tests run in ~2 seconds with no wallet and no RPC.
+          </p>
+
+          <CodeBlock lang="bash" code={`
+# Run everything: lint + full test suite
+npm run check
+
+# Fast AST lint only (~0.1s)
+npm run lint
+
+# Full test suite only (~2s)
+npm test
+`} />
+
+          <div className="rounded-xl overflow-hidden mb-5" style={{ border: "1px solid var(--border-subtle)" }}>
+            <div
+              className="px-4 py-2.5"
+              style={{ background: "var(--surface-raised)", borderBottom: "1px solid var(--border-divider)" }}
+            >
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}>
+                Test Coverage — 105 tests across 13 classes
+              </p>
+            </div>
+            <div className="divide-y" style={{ borderColor: "var(--border-divider)" }}>
+              {[
+                { cls: "TestPostJob",                  n: 11, desc: "Validation, field defaults, whitespace stripping"              },
+                { cls: "TestPostJobMilestones",         n:  9, desc: "Budget split, remainder, min/max milestone guards"             },
+                { cls: "TestTakeJob",                   n:  6, desc: "Happy path, self-take, double-take, nonexistent job"           },
+                { cls: "TestSubmitDelivery",            n:  7, desc: "Auth, open-job guard, blank/whitespace URL"                    },
+                { cls: "TestSubmitMilestoneDelivery",   n:  9, desc: "Index bounds, non-milestone job, already-delivered guard"      },
+                { cls: "TestApproveMilestone",          n:  9, desc: "Payment per milestone, completion, double-approve guard"       },
+                { cls: "TestAutoEvaluate",              n: 15, desc: "Score avg logic, avg=6 boundary, AI JSON parsing, profiles"    },
+                { cls: "TestReleaseManually",           n:  6, desc: "Auth, reasoning field, profile update"                        },
+                { cls: "TestResubmitDelivery",          n:  6, desc: "Field clearing, max-2 resubmit cap"                           },
+                { cls: "TestMessaging",                 n:  8, desc: "Accumulation, 500-char truncation, open-job guard"             },
+                { cls: "TestGetProfile",                n:  5, desc: "Defaults, reputation score formula (completed / total)"        },
+                { cls: "TestViewMethods",               n:  9, desc: "All view helpers, case-insensitive address filter"             },
+                { cls: "TestFullLifecycle",             n:  6, desc: "End-to-end: AI, manual, dispute→resubmit, milestones"          },
+              ].map(({ cls, n, desc }) => (
+                <div key={cls} className="px-4 py-3 flex items-start gap-3">
+                  <code
+                    className="text-[11px] font-bold flex-shrink-0 w-52"
+                    style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}
+                  >
+                    {cls}
+                  </code>
+                  <span
+                    className="text-[11px] font-bold flex-shrink-0 w-6 text-right"
+                    style={{ color: "#22c55e" }}
+                  >
+                    {n}
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs font-bold uppercase tracking-widest mb-3 mt-6" style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}>
+            Mocking AI &amp; web calls
+          </p>
+
+          <CodeBlock lang="python" code={`
+# Mock any LLM prompt — regex pattern, JSON string response
+direct_vm.mock_llm(".*", json.dumps({
+    "approved": True,
+    "reasoning": "Work looks good.",
+    "scores": {
+        "relevance": 8, "completeness": 8,
+        "quality": 8, "meets_spec": 8, "professional": 8,
+    },
+    "confidence": "high",
+}))
+
+# Mock evidence URL fetch — regex pattern, response dict
+direct_vm.mock_web(".*github.*", {
+    "method": "GET", "status": 200, "body": "# Project\\nAll done."
+})
+
+# Clear between phases when a test needs different responses
+direct_vm.clear_mocks()
+`} />
+
+          <div
+            className="rounded-xl p-5 mb-4"
+            style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.22)" }}
+          >
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.08em" }}>
+              Score-based approval logic
+            </p>
+            <p className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-secondary)" }}>
+              The contract ignores the <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}>&quot;approved&quot;</code> field
+              from the LLM and recomputes it from the 5 numeric scores. Tests cover all three boundary cases:
+            </p>
+            <div className="space-y-2">
+              {[
+                { avg: "4.6",  result: "DISPUTED",  color: "#ef4444", detail: "relevance:4 completeness:5 quality:5 meets_spec:4 professional:5" },
+                { avg: "6.0",  result: "COMPLETED", color: "#22c55e", detail: "all scores exactly 6 — boundary pass" },
+                { avg: "8.0",  result: "COMPLETED", color: "#22c55e", detail: "all scores 8 — normal approval" },
+              ].map(({ avg, result, color, detail }) => (
+                <div key={avg} className="flex items-center gap-3 text-xs flex-wrap">
+                  <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa", minWidth: 40 }}>avg={avg}</code>
+                  <span style={{ color: "var(--text-muted)" }}>→</span>
+                  <span
+                    className="px-2 py-0.5 rounded-full font-bold text-[10px]"
+                    style={{ background: `${color}18`, border: `1px solid ${color}30`, color }}
+                  >
+                    {result}
+                  </span>
+                  <span style={{ color: "var(--text-muted)" }}>{detail}</span>
+                </div>
+              ))}
+            </div>
+            <CodeBlock lang="python" code={`avg = sum(scores.values()) / 5   # 5 criteria, each 0–10
+approved = avg >= 6.0             # strict ≥ 6 threshold`} />
+          </div>
+
+          <Callout icon={CheckCircle2} color="#22c55e" bg="rgba(34,197,94,0.07)" border="rgba(34,197,94,0.22)">
+            <strong style={{ color: "#86efac" }}>genvm-lint</strong> runs 3 AST safety checks on the contract before
+            tests execute. If lint fails, the test step is skipped. Run{" "}
+            <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}>npm run lint</code> standalone for a
+            fast pre-commit check.
           </Callout>
 
           {/* ── WALLET & NETWORK ──────────────────────────────────────────── */}

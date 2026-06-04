@@ -302,7 +302,9 @@ Do not include any other words or characters.
 This result must be perfectly parseable by a JSON parser without errors."""
 
             result = gl.nondet.exec_prompt(prompt)
-            return result.replace("```json", "").replace("```", "")
+            if isinstance(result, dict):
+                return json.dumps(result)
+            return str(result).replace("```json", "").replace("```", "")
 
         result_str = gl.eq_principle.strict_eq(evaluate)
 

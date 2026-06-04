@@ -8,8 +8,9 @@
   "scripts": {
     "deploy": "genlayer deploy --contract contracts/arbiq.py",
     "deploy:bradbury": "genlayer deploy --contract contracts/arbiq.py --rpc https://rpc-bradbury.genlayer.com",
-    "test": ".venv/bin/pytest test/test_arbiq.py -v",
+    "test": ".venv/bin/gltest test/test_arbiq.py -v",
     "test:network": ".venv/bin/gltest",
+    "check": ".venv/bin/genvm-lint lint contracts/arbiq.py && .venv/bin/gltest test/test_arbiq.py -v",
     "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
     "install:frontend": "cd frontend && npm install"

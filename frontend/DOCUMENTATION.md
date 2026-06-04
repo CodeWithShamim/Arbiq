@@ -19,8 +19,9 @@
 10. [Contract Interaction Layer](#10-contract-interaction-layer)
 11. [State Management](#11-state-management)
 12. [Theming](#12-theming)
-13. [Adding a New Feature — Checklist](#13-adding-a-new-feature--checklist)
-14. [Environment Variables](#14-environment-variables)
+13. [Testing & Quality Checks](#13-testing--quality-checks)
+14. [Adding a New Feature — Checklist](#14-adding-a-new-feature--checklist)
+15. [Environment Variables](#15-environment-variables)
 
 ---
 
@@ -827,22 +828,124 @@ RainbowKit's theme (`darkTheme` / `lightTheme`) is swapped synchronously in `Rai
 
 ---
 
-## 13. Adding a New Feature — Checklist
+## 13. Testing & Quality Checks
+
+All contract quality checks are run from the repo root (not from `frontend/`).
+
+### One command
+
+```bash
+npm run check
+```
+
+Runs in sequence:
+
+1. **`genvm-lint lint contracts/arbiq.py`** — fast AST safety checks (~0.1s, fails early)
+2. **`gltest test/test_arbiq.py -v`** — 105 unit tests with the real GenVM SDK (~2s)
+
+### Test infrastructure
+
+Tests use **gltest direct mode** — the official `gltest` pytest plugin that loads the real `genlayer-py-std` SDK from a local GitHub release cache (`~/.cache/gltest-direct`). No testnet connection needed.
+
+```
+test/
+├── test_arbiq.py      # 105 tests across 13 test classes
+└── mock_genlayer.py   # Compatibility shim (no longer active)
+```
+
+#### Test fixtures
+
+| Fixture | Provided by | Purpose |
+|---|---|---|
+| `direct_vm` | `gltest.direct` | `VMContext` — set sender, value, mock LLM/web |
+| `direct_deploy` | `gltest.direct` | Deploy contract from path, returns proxy instance |
+
+#### Mocking non-deterministic calls
+
+```python
+# Mock any LLM prompt (regex pattern)
+direct_vm.mock_llm(".*", json.dumps({
+    "approved": True,
+    "reasoning": "Work looks good.",
+    "scores": {"relevance": 8, "completeness": 8, "quality": 8,
+               "meets_spec": 8, "professional": 8},
+    "confidence": "high",
+}))
+
+# Mock web URL fetch (regex pattern)
+direct_vm.mock_web(".*github.*", {"method": "GET", "status": 200, "body": "# Done"})
+
+# Clear between phases when a test needs different responses
+direct_vm.clear_mocks()
+```
+
+#### Setting message context
+
+```python
+direct_vm.sender = _addr(_CLIENT_BYTES)   # Address object
+direct_vm.value  = 1000                   # payable amount (GEN tokens)
+```
+
+#### Test class breakdown
+
+| Class | Count | Covers |
+|---|---|---|
+| `TestPostJob` | 11 | Validation, field defaults, whitespace stripping |
+| `TestPostJobMilestones` | 9 | Budget split, remainder, min/max milestone guards |
+| `TestTakeJob` | 6 | Happy path, self-take, double-take, nonexistent |
+| `TestSubmitDelivery` | 7 | Happy path, auth, open-job guard, blank URL |
+| `TestSubmitMilestoneDelivery` | 9 | Happy path, index bounds, non-milestone job |
+| `TestApproveMilestone` | 9 | Payment per milestone, completion, double-approve guard |
+| `TestAutoEvaluate` | 15 | Score avg logic, AI field persistence, edge cases |
+| `TestReleaseManually` | 6 | Auth, reasoning field, profile update |
+| `TestResubmitDelivery` | 6 | Field clearing, max-2 cap |
+| `TestMessaging` | 8 | Accumulation, 500-char truncation, open-job guard |
+| `TestGetProfile` | 5 | Defaults, reputation score formula |
+| `TestViewMethods` | 9 | All view helpers, case-insensitive filter |
+| `TestFullLifecycle` | 6 | End-to-end paths: AI, manual, dispute→resubmit, milestones |
+
+#### AI score approval logic
+
+The contract recomputes approval from 5 scores (ignoring the `"approved"` field):
+
+```
+avg = sum(scores.values()) / 5
+approved = avg >= 6.0
+```
+
+Tested boundaries: avg 4.6 → `disputed`, avg 6.0 → `completed`, avg 8.0 → `completed`.
+
+### Running individual steps
+
+```bash
+# Lint only (fast, no SDK)
+npm run lint
+
+# Tests only
+npm test
+```
+
+---
+
+## 14. Adding a New Feature — Checklist
 
 ### New contract method (read)
 
 1. Add Python method to `contracts/arbiq.py`
-2. Deploy updated contract, update `NEXT_PUBLIC_CONTRACT_ADDRESS`
-3. In `useArbiqContract.ts`: add `useQuery` hook calling `readContract("method_name", [args])`
-4. Add parser function if response needs transformation
-5. Use the hook in your page/component
+2. Run `npm run check` — lint + full test suite must pass
+3. Deploy updated contract, update `NEXT_PUBLIC_CONTRACT_ADDRESS`
+4. In `useArbiqContract.ts`: add `useQuery` hook calling `readContract("method_name", [args])`
+5. Add parser function if response needs transformation
+6. Use the hook in your page/component
 
 ### New contract method (write)
 
 1. Add Python method to `contracts/arbiq.py` (with `@gl.public.write`)
-2. Deploy and update address
-3. In `useArbiqContract.ts`: add hook that calls `useContractWrite().send({ functionName, args })`
-4. Render `<ConsensusTxStatus status={txState.status} txHash={txState.txHash} />` next to the action button
+2. Add tests for the new method in `test/test_arbiq.py`
+3. Run `npm run check` — must pass before deploying
+4. Deploy and update address
+5. In `useArbiqContract.ts`: add hook that calls `useContractWrite().send({ functionName, args })`
+6. Render `<ConsensusTxStatus status={txState.status} txHash={txState.txHash} />` next to the action button
 
 ### New page
 
@@ -861,7 +964,7 @@ RainbowKit's theme (`darkTheme` / `lightTheme`) is swapped synchronously in `Rai
 
 ---
 
-## 14. Environment Variables
+## 15. Environment Variables
 
 Create `frontend/.env.local` (never commit this file):
 

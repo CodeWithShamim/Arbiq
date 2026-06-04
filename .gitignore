@@ -1,4 +1,63 @@
-.env.local
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.log
+
+# GenLayer direct-mode SDK cache
+# (downloaded automatically by gltest, no need to commit)
+# ~/.cache/gltest-direct is outside repo but keep rule for safety
+
+# GenLayer artifacts (auto-generated on deploy/test)
+artifacts/
+
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+
+# Next.js build output
+.next/
+frontend/.next/
+out/
+frontend/out/
+
+# TypeScript build info
+*.tsbuildinfo
+frontend/*.tsbuildinfo
+
+# ── Environment & secrets ─────────────────────────────────────────────────────
 .env
-.next
-node_modules
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Compiled deploy scripts ───────────────────────────────────────────────────
+deploy/*.compiled.js
