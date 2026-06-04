@@ -255,13 +255,13 @@ export function ValidatorArena({ visible, onClose, result }: Props) {
           </AnimatePresence>
 
           {phase === "deliberating" && (
-            <div style={{ marginTop: 20, fontSize: 9, color: "#00f0ff66", letterSpacing: "0.2em" }}>
+            <div style={{ marginTop: 20, fontSize: 9, color: "#00f0ffcc", letterSpacing: "0.2em" }}>
               VALIDATORS DELIBERATING...
             </div>
           )}
 
           {phase === "verdict" && (
-            <div style={{ marginTop: 12, fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>
+            <div style={{ marginTop: 12, fontSize: 9, color: "rgba(255,255,255,0.65)", letterSpacing: "0.1em" }}>
               [ click anywhere to dismiss ]
             </div>
           )}

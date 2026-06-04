@@ -47,8 +47,8 @@ export function NetworkWidget() {
       style={{
         position: "fixed", bottom: 20, right: 20, zIndex: 200,
         width: 168,
-        background: "rgba(0,0,0,0.78)",
-        border: "1px solid rgba(0,240,255,0.22)",
+        background: "var(--bg-elevated)",
+        border: "1px solid var(--border-mid)",
         borderRadius: 10,
         backdropFilter: "blur(12px)",
         padding: "10px 12px",
@@ -56,20 +56,20 @@ export function NetworkWidget() {
         fontSize: 10,
       }}
     >
-      <div style={{ color: "#00f0ff", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 8, fontSize: 9 }}>
+      <div style={{ color: "#7c3aed", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 8, fontSize: 9 }}>
         ◆ NETWORK STATUS
       </div>
       {[
-        { label: "VALIDATORS", value: `${stats.validators}/5`, color: "#00ff88" },
-        { label: "PENDING TXS", value: String(stats.pending), color: "#ffd700" },
-        { label: "LAST BLOCK", value: `#${stats.block.toLocaleString()}`, color: "#00f0ff" },
-        { label: "AVG VERDICT", value: stats.avgVerdict, color: "#ff00ff" },
+        { label: "VALIDATORS", value: `${stats.validators}/5`, color: "#16a34a" },
+        { label: "PENDING TXS", value: String(stats.pending), color: "#b45309" },
+        { label: "LAST BLOCK", value: `#${stats.block.toLocaleString()}`, color: "#0369a1" },
+        { label: "AVG VERDICT", value: stats.avgVerdict, color: "#7c3aed" },
       ].map(({ label, value, color }) => (
         <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, alignItems: "center" }}>
-          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 9 }}>{label}</span>
+          <span style={{ color: "var(--text-muted)", fontSize: 9 }}>{label}</span>
           <span style={{ color, fontSize: 10, fontWeight: 700, overflow: "hidden", height: 14, display: "inline-block" }}>
             {label === "VALIDATORS" && (
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#00ff88", display: "inline-block", marginRight: 4, boxShadow: "0 0 6px #00ff88", opacity: blink ? 1 : 0.3, transition: "opacity 0.3s" }} />
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block", marginRight: 4, boxShadow: "0 0 5px rgba(34,197,94,0.6)", opacity: blink ? 1 : 0.4, transition: "opacity 0.3s" }} />
             )}
             {value}
           </span>

@@ -329,7 +329,7 @@ export function NotificationCenter() {
                       fontWeight: 700,
                       background: "rgba(124,58,237,0.18)",
                       border: "1px solid rgba(124,58,237,0.3)",
-                      color: "#c4b5fd",
+                      color: "var(--text-label)",
                       borderRadius: 999,
                       padding: "1px 7px",
                       fontFamily: '"JetBrains Mono", monospace',

@@ -34,13 +34,14 @@ export function DataFloats() {
       const x = Math.random() * 90;
       const duration = 15 + Math.random() * 12;
       el.textContent = str;
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
       el.style.cssText = `
         position:absolute;
         left:${x}%;
         bottom:0;
         font-family:'JetBrains Mono',monospace;
         font-size:10px;
-        color:rgba(0,240,255,0.18);
+        color:${isDark ? 'rgba(0,240,255,0.45)' : 'rgba(109,40,217,0.50)'};
         white-space:nowrap;
         pointer-events:none;
         animation:dataFloat ${duration}s linear forwards;

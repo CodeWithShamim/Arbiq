@@ -123,7 +123,7 @@ Requirements:
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all duration-200"
                   style={
                     paymentMode === mode
-                      ? { background: "rgba(124,58,237,0.2)", color: "#c4b5fd", border: "1px solid rgba(124,58,237,0.35)" }
+                      ? { background: "rgba(124,58,237,0.18)", color: "var(--text-primary)", border: "1px solid rgba(124,58,237,0.40)" }
                       : { color: "var(--text-muted)", border: "1px solid transparent" }
                   }
                 >
@@ -140,7 +140,7 @@ Requirements:
                 style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}
               >
                 <Layers className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#a78bfa" }} />
-                <p className="text-xs leading-relaxed" style={{ color: "#c4b5fd" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                   Budget splits equally across milestones. Freelancers deliver per milestone, you pay each one out individually. Reduces risk on large projects.
                 </p>
               </div>
@@ -279,7 +279,7 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
               }}
             >
               <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#a78bfa" }} />
-              <p className="text-xs leading-relaxed" style={{ color: "#c4b5fd" }}>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                 <span className="font-semibold">Escrow:</span> Your{" "}
                 <span className="font-mono font-bold">{form.budget || "0"} GEN</span>{" "}
                 {paymentMode === "milestones"
@@ -294,7 +294,7 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
                 className="flex items-center justify-between gap-4 p-4 rounded-xl"
                 style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
               >
-                <span className="flex items-center gap-2 text-sm" style={{ color: "#fca5a5" }}>
+                <span className="flex items-center gap-2 text-sm" style={{ color: "#dc2626" }}>
                   <AlertCircle className="w-4 h-4" />
                   Connect your wallet to post
                 </span>
@@ -302,7 +302,7 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
                   type="button"
                   onClick={() => openConnectModal?.()}
                   className="text-sm font-semibold underline transition-colors"
-                  style={{ color: "#f87171" }}
+                  style={{ color: "#dc2626" }}
                 >
                   Connect
                 </button>

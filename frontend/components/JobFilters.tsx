@@ -240,7 +240,7 @@ function FilterPanel({ filters, onChange, onClear, budgetCeiling, statusCounts }
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all"
                 style={
                   active
-                    ? { background: "rgba(124,58,237,0.18)", border: "1px solid rgba(124,58,237,0.4)", color: "#c4b5fd" }
+                    ? { background: "rgba(124,58,237,0.18)", border: "1px solid rgba(124,58,237,0.4)", color: "var(--text-label)" }
                     : { background: "var(--surface-raised)", border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }
                 }
               >
@@ -394,7 +394,7 @@ export function JobFilterBar({
           style={{
             background: activeCount > 0 ? "rgba(124,58,237,0.15)" : "var(--surface-raised)",
             border: `1px solid ${activeCount > 0 ? "rgba(124,58,237,0.4)" : "var(--border-subtle)"}`,
-            color: activeCount > 0 ? "#c4b5fd" : "var(--text-secondary)",
+            color: activeCount > 0 ? "var(--text-label)" : "var(--text-secondary)",
           }}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -417,7 +417,7 @@ export function JobFilterBar({
             style={{
               background: sortOpen ? "rgba(124,58,237,0.15)" : "var(--surface-raised)",
               border: `1px solid ${sortOpen ? "rgba(124,58,237,0.35)" : "var(--border-subtle)"}`,
-              color: sortOpen ? "#c4b5fd" : "var(--text-secondary)",
+              color: sortOpen ? "var(--text-label)" : "var(--text-secondary)",
             }}
           >
             <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />

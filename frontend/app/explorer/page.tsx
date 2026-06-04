@@ -433,7 +433,7 @@ export default function ExplorerPage() {
                     borderBottom: "1px solid var(--border-divider)",
                     background: expanded === tx.hash ? "rgba(124,58,237,0.05)" : "transparent",
                   }}
-                  onMouseEnter={(e) => { if (expanded !== tx.hash) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; }}
+                  onMouseEnter={(e) => { if (expanded !== tx.hash) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
                   onMouseLeave={(e) => { if (expanded !== tx.hash) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
                   {/* Hash */}
@@ -564,7 +564,7 @@ function PagBtn({ onClick, disabled, active, children }: {
       style={{
         background: active ? "rgba(124,58,237,0.22)" : "var(--glass-bg)",
         border:    `1px solid ${active ? "rgba(124,58,237,0.45)" : "var(--border-subtle)"}`,
-        color:      active ? "#c4b5fd" : "var(--text-secondary)",
+        color:      active ? "#7c3aed" : "var(--text-secondary)",
       }}
     >
       {children}

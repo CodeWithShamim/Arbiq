@@ -56,7 +56,7 @@ export function JobCard({ job }: { job: Job }) {
                 style={{
                   background: "rgba(167,139,250,0.15)",
                   border: "1px solid rgba(167,139,250,0.3)",
-                  color: "#c4b5fd",
+                  color: "var(--text-label)",
                   letterSpacing: "0.06em",
                 }}
               >
@@ -69,7 +69,7 @@ export function JobCard({ job }: { job: Job }) {
                 style={{
                   background: "rgba(124,58,237,0.18)",
                   border: "1px solid rgba(124,58,237,0.35)",
-                  color: "#c4b5fd",
+                  color: "var(--text-label)",
                   letterSpacing: "0.06em",
                 }}
               >

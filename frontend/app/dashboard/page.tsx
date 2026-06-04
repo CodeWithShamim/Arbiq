@@ -38,7 +38,7 @@ export default function DashboardPage() {
           <p className="text-sm mb-2 max-w-xs font-medium" style={{ color: "var(--text-secondary)" }}>
             Connect your wallet to see the jobs you've posted, work in progress, and payment history.
           </p>
-          <p className="text-xs mb-8 max-w-xs" style={{ color: "var(--text-muted)" }}>
+          <p className="text-xs mb-8 max-w-xs" style={{ color: "var(--text-secondary)" }}>
             Read-only browsing doesn't require a wallet — only posting, taking, or evaluating jobs does.
           </p>
           <button

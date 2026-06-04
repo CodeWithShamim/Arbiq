@@ -130,7 +130,7 @@ export function TxModal({ visible, stage, result = null, onClose, txHash }: Prop
                   }}>
                     {done ? (s === "finalized" ? (result === "approved" ? "✓" : "✗") : "✓") : (i + 1)}
                   </div>
-                  <span style={{ fontSize: 8, color: done ? stageColor : "rgba(255,255,255,0.2)", letterSpacing: "0.1em" }}>
+                  <span style={{ fontSize: 8, color: done ? stageColor : "rgba(255,255,255,0.55)", letterSpacing: "0.1em" }}>
                     {s.toUpperCase()}
                   </span>
                 </div>
@@ -176,9 +176,9 @@ export function TxModal({ visible, stage, result = null, onClose, txHash }: Prop
 
           {/* Tx hash */}
           {txHash && (
-            <div style={{ marginTop: 16, padding: "8px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", marginBottom: 3 }}>TX HASH</div>
-              <div style={{ fontSize: 9, color: "#00f0ff66", wordBreak: "break-all" }}>{txHash}</div>
+            <div style={{ marginTop: 16, padding: "8px 12px", background: "rgba(255,255,255,0.08)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.12)" }}>
+              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.55)", marginBottom: 3 }}>TX HASH</div>
+              <div style={{ fontSize: 9, color: "#67e8f9", wordBreak: "break-all" }}>{txHash}</div>
             </div>
           )}
 

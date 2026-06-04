@@ -296,7 +296,7 @@ function Sidebar({ active }: { active: string }) {
             href={`#${id}`}
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-150"
             style={{
-              color: isActive ? "#a78bfa" : "var(--text-muted)",
+              color: isActive ? "#7c3aed" : "var(--text-muted)",
               background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
               borderLeft: isActive ? "2px solid #7c3aed" : "2px solid transparent",
             }}
@@ -541,7 +541,7 @@ export default function DocsPage() {
           >
             <pre
               className="text-xs leading-relaxed"
-              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#c4b5fd", margin: 0 }}
+              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#d4b8ff", margin: 0 }}
             >
 {`Browser (Next.js 16 · React 19 · Tailwind CSS v4)
    │
@@ -716,7 +716,7 @@ class Arbiq(gl.Contract):
           >
             <pre
               className="text-xs leading-relaxed"
-              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#c4b5fd", margin: 0 }}
+              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#d4b8ff", margin: 0 }}
             >
 {`post_job()  ──────────────────────────────► OPEN
                                               │

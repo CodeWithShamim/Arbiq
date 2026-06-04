@@ -391,7 +391,7 @@ export default function AnalyticsPage() {
                     style={{
                       background: range === key ? "rgba(124,58,237,0.22)" : "transparent",
                       border:     range === key ? "1px solid rgba(124,58,237,0.35)" : "1px solid transparent",
-                      color:      range === key ? "#c4b5fd" : "var(--text-muted)",
+                      color:      range === key ? "var(--text-label)" : "var(--text-muted)",
                     }}
                   >
                     {label}
@@ -641,7 +641,7 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-2">
               <BarChart2 className="w-4 h-4" style={{ color: "#a78bfa" }} />
               <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Raw Job Data</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(124,58,237,0.14)", border: "1px solid rgba(124,58,237,0.25)", color: "#c4b5fd", fontFamily: '"JetBrains Mono"' }}>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(124,58,237,0.14)", border: "1px solid rgba(124,58,237,0.25)", color: "var(--text-label)", fontFamily: '"JetBrains Mono"' }}>
                 {jobs.length} rows
               </span>
             </div>
