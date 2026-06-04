@@ -17,7 +17,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Read persisted preference on mount
   useEffect(() => {
     const stored = localStorage.getItem("arbiq-theme") as Theme | null;
-    const preferred = stored ?? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    const preferred = stored ?? "dark";
     setTheme(preferred);
     document.documentElement.setAttribute("data-theme", preferred);
   }, []);
