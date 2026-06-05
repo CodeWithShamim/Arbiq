@@ -216,13 +216,36 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const { release, txState: releaseState, isLoading: releasing } = useRelease();
   const { resubmitDelivery, txState: resubmitState, isLoading: resubmitting } = useResubmitDelivery();
 
+  // Poll until the on-chain job status reflects the completed write.
+  // We track which individual state *just* reached 'finalized' so that a
+  // previously-finalized take_job doesn't shadow a later deliver/evaluate.
   useEffect(() => {
-    const states = [takeState, deliverState, evalState, releaseState, resubmitState];
-    if (states.some((s) => s.status === 'finalized')) setTimeout(() => refetch(), 3000);
-    states.forEach((s) => {
-      if (s.status === 'error' && s.error) toast.error(s.error);
-    });
-  }, [takeState, deliverState, evalState, releaseState, resubmitState, refetch]);
+    if (takeState.status === 'error' && takeState.error) toast.error(takeState.error);
+  }, [takeState.status, takeState.error]);
+
+  useEffect(() => {
+    if (deliverState.status === 'error' && deliverState.error) toast.error(deliverState.error);
+  }, [deliverState.status, deliverState.error]);
+
+  useEffect(() => {
+    if (evalState.status === 'error' && evalState.error) toast.error(evalState.error);
+  }, [evalState.status, evalState.error]);
+
+  useEffect(() => {
+    if (releaseState.status === 'error' && releaseState.error) toast.error(releaseState.error);
+  }, [releaseState.status, releaseState.error]);
+
+  useEffect(() => {
+    if (resubmitState.status === 'error' && resubmitState.error) toast.error(resubmitState.error);
+  }, [resubmitState.status, resubmitState.error]);
+
+  // One polling effect per write — each watches only its own status so they
+  // can't interfere with each other's expected-status check.
+  usePollUntil(takeState.status,     'active',                   refetch);
+  usePollUntil(deliverState.status,  'delivered',                refetch);
+  usePollUntil(resubmitState.status, 'delivered',                refetch);
+  usePollUntil(evalState.status,     null /* completed|disputed */, refetch);
+  usePollUntil(releaseState.status,  'completed',                refetch);
 
   if (isLoading)
     return (
@@ -1038,6 +1061,41 @@ function Section({
       {children}
     </div>
   );
+}
+
+// Polls refetch every 2s after a tx finalises, stopping once the job status
+// matches `target` (or any terminal status when target is null), up to 40s.
+function usePollUntil(
+  txStatus: string,
+  target: string | null,
+  refetch: () => Promise<{ data?: unknown }>
+) {
+  useEffect(() => {
+    if (txStatus !== 'finalized') return;
+
+    let attempts = 0;
+    const MAX = 20;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const poll = async () => {
+      attempts++;
+      const result = await refetch();
+      const jobStatus = (result.data as { status?: string } | null)?.status;
+
+      const reached = target
+        ? jobStatus === target
+        : jobStatus === 'completed' || jobStatus === 'disputed';
+
+      if (!reached && attempts < MAX) {
+        timer = setTimeout(poll, 2_000);
+      }
+    };
+
+    timer = setTimeout(poll, 2_000);
+    return () => clearTimeout(timer);
+  // refetch is stable (React Query), target is a string literal — safe to omit
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txStatus]);
 }
 
 function ActionButton({

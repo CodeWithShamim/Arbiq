@@ -1,20 +1,24 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PostJobFAB } from '@/components/PostJobFAB';
 import { JobCard, JobCardSkeleton } from '@/components/JobCard';
 import { JobFilterBar, JobFilterSidebar } from '@/components/JobFilters';
+import { Pagination } from '@/components/Pagination';
 import { useJobs, DEFAULT_FILTERS } from '@/hooks/useJobs';
 import { useLocalFavorites } from '@/hooks/useLocalFavorites';
 import type { JobFilters } from '@/hooks/useJobs';
 import Link from 'next/link';
 import { Heart, PlusCircle, RefreshCw } from 'lucide-react';
 
+const PAGE_SIZE = 9;
+
 export default function BrowseJobsPage() {
   const [filters, setFilters] = useState<JobFilters>(DEFAULT_FILTERS);
   const [showFavs, setShowFavs] = useState(false);
+  const [page, setPage] = useState(1);
 
   const { allJobs, filteredJobs, isLoading, error, refetch, budgetCeiling, statusCounts } =
     useJobs(filters);
@@ -22,15 +26,23 @@ export default function BrowseJobsPage() {
 
   const patchFilters = useCallback((patch: Partial<JobFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
+    setPage(1);
   }, []);
 
   const clearFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
+    setPage(1);
   }, []);
 
-  const visibleJobs = showFavs
+  // Reset to page 1 when favorites toggle changes
+  useEffect(() => { setPage(1); }, [showFavs]);
+
+  const allVisible = showFavs
     ? filteredJobs.filter((j) => isFavorite(j.id))
     : filteredJobs;
+
+  const totalPages = Math.ceil(allVisible.length / PAGE_SIZE);
+  const visibleJobs = allVisible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const filterProps = {
     filters,
@@ -39,7 +51,7 @@ export default function BrowseJobsPage() {
     budgetCeiling,
     statusCounts,
     totalCount: allJobs.length,
-    filteredCount: visibleJobs.length,
+    filteredCount: allVisible.length,
   };
 
   return (
@@ -161,17 +173,27 @@ export default function BrowseJobsPage() {
                 ))}
               </div>
             ) : visibleJobs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger">
-                {visibleJobs.map((job, i) => (
-                  <div
-                    key={job.id}
-                    className="anim-fade-up"
-                    style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}
-                  >
-                    <JobCard job={job} />
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger">
+                  {visibleJobs.map((job, i) => (
+                    <div
+                      key={job.id}
+                      className="anim-fade-up"
+                      style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}
+                    >
+                      <JobCard job={job} />
+                    </div>
+                  ))}
+                </div>
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  onChange={(p) => {
+                    setPage(p);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+              </>
             ) : (
               <div
                 className="text-center py-28 rounded-2xl"

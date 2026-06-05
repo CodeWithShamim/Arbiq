@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Navbar } from "@/components/Navbar";
 import { JobCard, JobCardSkeleton } from "@/components/JobCard";
 import { useGetAllJobs, useGetMyJobs, useGetProfile } from "@/hooks/useArbiqContract";
@@ -11,6 +12,9 @@ import Link from "next/link";
 import { useCountUp } from "@/hooks/useCountUp";
 import { Footer } from "@/components/Footer";
 import { PostJobFAB } from "@/components/PostJobFAB";
+import { Pagination } from "@/components/Pagination";
+
+const DASHBOARD_PAGE_SIZE = 3;
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
@@ -248,12 +252,28 @@ function JobColumn({
   emptyLink: { href: string; label: string };
   headerLink: { href: string; label: string };
 }) {
+  const [page, setPage] = React.useState(1);
+
+  const sorted = [...jobs].reverse();
+  const totalPages = Math.ceil(sorted.length / DASHBOARD_PAGE_SIZE);
+  const pageJobs = sorted.slice((page - 1) * DASHBOARD_PAGE_SIZE, page * DASHBOARD_PAGE_SIZE);
+
   return (
     <section>
       <div className="flex items-center justify-between mb-5">
-        <h2 className="font-bold text-sm" style={{ color: "var(--text-primary)", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          {title}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-bold text-sm" style={{ color: "var(--text-primary)", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            {title}
+          </h2>
+          {jobs.length > 0 && (
+            <span
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: "rgba(124,58,237,0.14)", border: "1px solid rgba(124,58,237,0.28)", color: "#a78bfa" }}
+            >
+              {jobs.length}
+            </span>
+          )}
+        </div>
         <Link
           href={headerLink.href}
           className="flex items-center gap-1 text-xs font-bold transition-colors"
@@ -271,13 +291,16 @@ function JobColumn({
           {[1, 2].map((i) => <JobCardSkeleton key={i} />)}
         </div>
       ) : jobs.length > 0 ? (
-        <div className="space-y-3 stagger">
-          {[...jobs].reverse().map((job, i) => (
-            <div key={job.id} className="anim-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <JobCard job={job} />
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="space-y-3 stagger">
+            {pageJobs.map((job, i) => (
+              <div key={job.id} className="anim-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
+                <JobCard job={job} />
+              </div>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </>
       ) : (
         <div
           className="text-center py-16 rounded-2xl"
