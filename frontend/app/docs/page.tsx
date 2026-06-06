@@ -1393,6 +1393,7 @@ Explorer:      https://explorer-bradbury.genlayer.com
                 status: "active",
                 color: "#f59e0b",
                 items: [
+                  { text: "Cancel job & escrow refund (client can cancel open jobs, GEN returned automatically)", badge: "Working" },
                   "Appeal mechanism for DISPUTED jobs (multi-sig re-evaluation)",
                   "Partial payment support (milestone-based escrow releases)",
                   "Freelancer reputation score (on-chain completion history)",
@@ -1457,17 +1458,29 @@ Explorer:      https://explorer-bradbury.genlayer.com
 
                 {/* Items */}
                 <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
-                  {items.map((item) => (
-                    <div key={item} className="flex items-start gap-2.5 text-sm">
-                      <div
-                        className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: color, opacity: status === "future" ? 0.45 : 1 }}
-                      />
-                      <span style={{ color: status === "future" ? "var(--text-muted)" : "var(--text-secondary)" }}>
-                        {item}
-                      </span>
-                    </div>
-                  ))}
+                  {items.map((item) => {
+                    const text = typeof item === "string" ? item : item.text;
+                    const badge = typeof item === "string" ? undefined : item.badge;
+                    return (
+                      <div key={text} className="flex items-start gap-2.5 text-sm">
+                        <div
+                          className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ background: color, opacity: status === "future" ? 0.45 : 1 }}
+                        />
+                        <span style={{ color: status === "future" ? "var(--text-muted)" : "var(--text-secondary)" }}>
+                          {text}
+                          {badge && (
+                            <span
+                              className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest align-middle"
+                              style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.35)", color: "#fbbf24" }}
+                            >
+                              {badge}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
