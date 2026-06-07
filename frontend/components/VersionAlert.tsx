@@ -39,7 +39,7 @@ export function VersionAlert() {
   return (
     <div
       role="status"
-      className="fixed left-0 right-0 z-[60] flex items-center justify-center gap-3 px-4 py-2.5"
+      className="fixed left-0 right-0 z-60 flex items-center justify-center gap-3 px-4 py-2.5"
       style={{
         top: 62,
         background: "linear-gradient(90deg, #7c3aed, #6366f1)",

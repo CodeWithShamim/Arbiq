@@ -62,7 +62,7 @@ Everything — escrow, proposals, milestones, ratings, chat, and the AI verdict 
      │  auto_evaluate()                 │                              │
      ├─────────────────────────────────▶│                              │
      │                          ┌───────┴────────┐                     │
-     │                          │  GenLayer       │   gl.get_webpage() │
+     │                          │  GenLayer       │  gl.nondet.web     │
      │                          │  validators     │   gl.exec_prompt() │
      │                          │  read evidence, │   strict_eq()      │
      │                          │  score 0–10 ×5, │                    │
@@ -167,7 +167,7 @@ Everything — escrow, proposals, milestones, ratings, chat, and the AI verdict 
         │   │  Arbiq Intelligent Contract     │ │
         │   │  contracts/arbiq.py (Python)    │ │
         │   │  • TreeMap state                │ │
-        │   │  • gl.get_webpage()             │ │
+        │   │  • gl.nondet.web.render()       │ │
         │   │  • gl.exec_prompt()             │ │
         │   │  • gl.eq_principle.strict_eq()  │ │
         │   └────────────────────────────────┘  │
@@ -404,7 +404,7 @@ After deploying, update `NEXT_PUBLIC_CONTRACT_ADDRESS` in `frontend/.env.local` 
 
 | Layer | Technologies |
 | --- | --- |
-| **Smart contract** | Python · GenLayer Intelligent Contracts · GenVM (`gl.get_webpage`, `gl.exec_prompt`, `gl.eq_principle.strict_eq`) |
+| **Smart contract** | Python · GenLayer Intelligent Contracts · GenVM (`gl.nondet.web.render`, `gl.nondet.exec_prompt`, `gl.eq_principle.strict_eq`) |
 | **Contract testing** | `gltest` direct runner · pytest (130 tests) |
 | **Frontend** | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 |
 | **Web3** | wagmi · viem · RainbowKit · genlayer-js |

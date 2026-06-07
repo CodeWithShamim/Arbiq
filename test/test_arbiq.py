@@ -73,15 +73,34 @@ def _mock_web(vm, url: str = ".*", body: str = "page content") -> None:
     vm.mock_web(url, {"method": "GET", "status": 200, "body": body})
 
 
+def _deadline_unix(deadline: str) -> int:
+    """Client-side deadline → unix seconds (mirrors the frontend helper)."""
+    import datetime as _dt
+    if not deadline:
+        return 0
+    try:
+        dt = _dt.datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+    except Exception:
+        try:
+            dt = _dt.datetime.strptime(deadline[:10], "%Y-%m-%d")
+        except Exception:
+            return 0
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_dt.timezone.utc)
+    return int(dt.timestamp())
+
+
 def _post_job(contract, vm, *,
               title="Build a website",
               description="Build a full-stack website with auth and CRUD",
               deadline="2026-12-31",
+              deadline_ts=None,
               budget=1000) -> int:
     job_id = contract.get_job_count()
     vm.sender = _addr(_CLIENT_BYTES)
     vm.value = budget
-    contract.post_job(title, description, deadline)
+    ts = _deadline_unix(deadline) if deadline_ts is None else deadline_ts
+    contract.post_job(title, description, deadline, ts)
     return job_id
 
 
@@ -89,6 +108,7 @@ def _post_job_milestones(contract, vm, *,
                          title="Build a website",
                          description="Build a full-stack website with auth and CRUD",
                          deadline="2026-12-31",
+                         deadline_ts=None,
                          budget=1000,
                          milestones=None) -> int:
     if milestones is None:
@@ -96,7 +116,8 @@ def _post_job_milestones(contract, vm, *,
     job_id = contract.get_job_count()
     vm.sender = _addr(_CLIENT_BYTES)
     vm.value = budget
-    contract.post_job_milestones(title, description, deadline, milestones)
+    ts = _deadline_unix(deadline) if deadline_ts is None else deadline_ts
+    contract.post_job_milestones(title, description, deadline, milestones, ts)
     return job_id
 
 
@@ -236,6 +257,43 @@ class TestPostJob:
         jid = c.get_job_count()
         c.post_job("abc", "A sufficiently long description for this job", "2026-12-31")
         assert _job(c, jid)["title"] == "abc"
+
+
+# ── time determinism ──────────────────────────────────────────────────────────
+# The contract must NOT read the wall clock in deterministic code (it breaks
+# validator consensus). created_at/updated_at are stored as 0; deadline_ts is
+# whatever the caller passed.
+
+class TestTimeDeterminism:
+    def test_created_and_updated_at_are_zero(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        job = _job(c, jid)
+        assert job["created_at"] == 0
+        assert job["updated_at"] == 0
+
+    def test_deadline_ts_stored_from_arg(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm, deadline="2026-01-02", deadline_ts=1767312000)
+        assert _job(c, jid)["deadline_ts"] == 1767312000
+
+    def test_deadline_ts_defaults_to_zero_when_omitted(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        direct_vm.value = 100
+        jid = c.get_job_count()
+        # 3-arg call (deadline_ts omitted) → non-enforcing deadline
+        c.post_job("Quick job", "A sufficiently long description for this job", "2026-12-31")
+        assert _job(c, jid)["deadline_ts"] == 0
+
+    def test_message_timestamp_is_zero(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        _take_job(c, direct_vm, jid)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        c.send_message(jid, "Hello")
+        msgs = json.loads(c.get_messages(jid))
+        assert msgs[0]["timestamp"] == 0
 
 
 # ── post_job_milestones ───────────────────────────────────────────────────────

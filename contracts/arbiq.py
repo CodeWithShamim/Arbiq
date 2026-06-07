@@ -3,7 +3,6 @@ from genlayer import *
 
 import json
 import re
-import datetime
 
 
 @gl.evm.contract_interface
@@ -24,32 +23,33 @@ class Arbiq(gl.Contract):
     def __init__(self):
         self.job_count = u256(0)
 
-    # ── time helpers ────────────────────────────────────────────────────────────
-    # In GenVM, datetime.now() is driven by the deterministic block time, so this
-    # is a safe deterministic clock for deadline checks.
+    # ── time on GenLayer ──────────────────────────────────────────────────────────
+    # IMPORTANT: wall-clock time (datetime.now()) is NON-DETERMINISTIC — each
+    # validator would read a different value and consensus would never finalize.
+    # So the contract never reads the clock in deterministic code:
+    #   • created_at / updated_at / message timestamps are stored as 0; the real
+    #     time is recovered off-chain from the transaction's block (the explorer
+    #     and frontend already do this).
+    #   • deadline_ts is supplied by the caller (computed client-side) and only
+    #     stored — a plain integer the contract treats as data.
+    #   • The single place that genuinely needs "now" (reclaim_expired) pulls it
+    #     through consensus via gl.eq_principle.strict_eq so all validators agree.
 
-    def _now_ts(self) -> int:
-        return int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    def _consensus_now(self) -> int:
+        """Current unix time, agreed across validators (non-deterministic source
+        wrapped in an equivalence principle). Use ONLY where a live clock is
+        actually required."""
+        import datetime as _dt
 
-    def _parse_deadline_ts(self, deadline: str) -> int:
-        """Best-effort parse of a deadline string (ISO date or datetime) to a unix
-        timestamp. Returns 0 when it cannot be parsed (deadline then non-enforcing)."""
-        s = (deadline or "").strip()
-        if not s:
-            return 0
-        # Normalise a trailing Z to +00:00 for fromisoformat
-        s = s.replace("Z", "+00:00")
+        def read_clock() -> str:
+            # Return as a string so strict_eq compares a stable calldata value.
+            return str(int(_dt.datetime.now(_dt.timezone.utc).timestamp()))
+
+        result = gl.eq_principle.strict_eq(read_clock)
         try:
-            dt = datetime.datetime.fromisoformat(s)
+            return int(result)
         except Exception:
-            # Try plain YYYY-MM-DD
-            try:
-                dt = datetime.datetime.strptime(s[:10], "%Y-%m-%d")
-            except Exception:
-                return 0
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-        return int(dt.timestamp())
+            return 0
 
     # ── storage helpers ─────────────────────────────────────────────────────────
 
@@ -123,7 +123,7 @@ class Arbiq(gl.Contract):
     # ── job creation ─────────────────────────────────────────────────────────────
 
     @gl.public.write.payable
-    def post_job(self, title: str, description: str, deadline: str) -> None:
+    def post_job(self, title: str, description: str, deadline: str, deadline_ts: int = 0) -> None:
         if len(title.strip()) < 3:
             raise gl.vm.UserError("Title must be at least 3 characters")
         if len(description.strip()) < 20:
@@ -144,7 +144,8 @@ class Arbiq(gl.Contract):
             "budget": int(budget),
             "escrow_remaining": int(budget),
             "deadline": deadline,
-            "deadline_ts": self._parse_deadline_ts(deadline),
+            # Caller-supplied unix seconds (computed client-side); 0 = non-enforcing.
+            "deadline_ts": int(deadline_ts) if deadline_ts else 0,
             "client": gl.message.sender_address.as_hex,
             "freelancer": "",
             "status": "open",
@@ -156,13 +157,13 @@ class Arbiq(gl.Contract):
             "resubmit_count": 0,
             "has_milestones": False,
             "rated": False,
-            "created_at": self._now_ts(),
-            "updated_at": self._now_ts(),
+            "created_at": 0,
+            "updated_at": 0,
         }
         self._save_job(job_id, job)
 
     @gl.public.write.payable
-    def post_job_milestones(self, title: str, description: str, deadline: str, milestone_titles: list) -> None:
+    def post_job_milestones(self, title: str, description: str, deadline: str, milestone_titles: list, deadline_ts: int = 0) -> None:
         if len(title.strip()) < 3:
             raise gl.vm.UserError("Title must be at least 3 characters")
         if len(description.strip()) < 20:
@@ -203,7 +204,7 @@ class Arbiq(gl.Contract):
             "budget": int(budget),
             "escrow_remaining": int(budget),
             "deadline": deadline,
-            "deadline_ts": self._parse_deadline_ts(deadline),
+            "deadline_ts": int(deadline_ts) if deadline_ts else 0,
             "client": gl.message.sender_address.as_hex,
             "freelancer": "",
             "status": "open",
@@ -216,8 +217,8 @@ class Arbiq(gl.Contract):
             "has_milestones": True,
             "milestones": milestones,
             "rated": False,
-            "created_at": self._now_ts(),
-            "updated_at": self._now_ts(),
+            "created_at": 0,
+            "updated_at": 0,
         }
         self._save_job(job_id, job)
 
@@ -236,7 +237,7 @@ class Arbiq(gl.Contract):
         self._refund_client(job)
         job["status"] = "cancelled"
         job["ai_reasoning"] = "Cancelled by client before assignment. Escrow refunded."
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -253,12 +254,13 @@ class Arbiq(gl.Contract):
         deadline_ts = int(job.get("deadline_ts", 0))
         if deadline_ts <= 0:
             raise gl.vm.UserError("Job has no enforceable deadline")
-        if self._now_ts() < deadline_ts:
+        # This is the one place we need a live clock — pull it through consensus.
+        if self._consensus_now() < deadline_ts:
             raise gl.vm.UserError("Deadline has not passed yet")
         self._refund_client(job)
         job["status"] = "cancelled"
         job["ai_reasoning"] = "Freelancer missed the deadline without delivering. Escrow refunded to client."
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -277,7 +279,7 @@ class Arbiq(gl.Contract):
         self._refund_client(job)
         job["status"] = "refunded"
         job["ai_reasoning"] = "Dispute unresolved after maximum resubmits. Escrow refunded to client."
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     # ── proposals / bidding ──────────────────────────────────────────────────────
@@ -306,7 +308,7 @@ class Arbiq(gl.Contract):
             "freelancer": caller,
             "note": note.strip()[:1000],
             "bid": int(bid) if bid else 0,
-            "created_at": self._now_ts(),
+            "created_at": 0,
         })
         self.proposals[jid] = json.dumps(proposals)
 
@@ -329,7 +331,7 @@ class Arbiq(gl.Contract):
             raise gl.vm.UserError("That address has not applied to this job")
         job["freelancer"] = match["freelancer"]
         job["status"] = "active"
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -344,7 +346,7 @@ class Arbiq(gl.Contract):
             raise gl.vm.UserError("Client cannot take their own job")
         job["freelancer"] = caller
         job["status"] = "active"
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.view
@@ -367,7 +369,7 @@ class Arbiq(gl.Contract):
         job["evidence_url"] = evidence_url.strip()
         job["evidence_note"] = evidence_note.strip() if evidence_note else ""
         job["status"] = "delivered"
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -392,7 +394,7 @@ class Arbiq(gl.Contract):
         m["evidence_url"] = evidence_url.strip()
         m["evidence_note"] = evidence_note.strip() if evidence_note else ""
         m["status"] = "delivered"
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -425,7 +427,7 @@ class Arbiq(gl.Contract):
             job["ai_reasoning"] = "All milestones approved by client."
             self._update_freelancer_profile(job["freelancer"], int(job["budget"]), disputed=False)
 
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     # ── evaluation & release ─────────────────────────────────────────────────────
@@ -451,8 +453,11 @@ class Arbiq(gl.Contract):
 
         def evaluate() -> str:
             # Fetch the actual evidence URL so validators read the real content.
+            # gl.nondet.web.render() renders the page in a browser-like env and
+            # returns the visible text — the supported web-fetch API (there is no
+            # gl.get_webpage). Must run inside this nondet/eq_principle block.
             try:
-                evidence_content = gl.get_webpage(evidence_url, mode="text")
+                evidence_content = gl.nondet.web.render(evidence_url, mode="text")
                 evidence_content = evidence_content[:3000] if evidence_content else ""
             except Exception:
                 evidence_content = ""
@@ -546,7 +551,7 @@ This result must be perfectly parseable by a JSON parser without errors."""
         job["ai_scores"] = json.dumps(scores) if scores else "{}"
         job["ai_confidence"] = confidence
         job["status"] = "completed" if approved else "disputed"
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
 
         if approved:
             self._pay_freelancer(job, budget)
@@ -566,7 +571,7 @@ This result must be perfectly parseable by a JSON parser without errors."""
         self._pay_freelancer(job, job["budget"])
         job["status"] = "completed"
         job["ai_reasoning"] = "Manually approved by client."
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
         self._update_freelancer_profile(job["freelancer"], int(job["budget"]), disputed=False)
 
@@ -591,7 +596,7 @@ This result must be perfectly parseable by a JSON parser without errors."""
         job["ai_reasoning"] = ""
         job["ai_scores"] = "{}"
         job["ai_confidence"] = ""
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     # ── ratings / reviews ────────────────────────────────────────────────────────
@@ -621,7 +626,7 @@ This result must be perfectly parseable by a JSON parser without errors."""
         job["rated"] = True
         job["rating"] = int(stars)
         job["review"] = (review or "").strip()[:500]
-        job["updated_at"] = self._now_ts()
+        job["updated_at"] = 0
         self._save_job(jid, job)
 
     @gl.public.write
@@ -656,7 +661,7 @@ This result must be perfectly parseable by a JSON parser without errors."""
             "sender": sender,
             "content": content[:500],
             "role": "client" if sender == job["client"] else "freelancer",
-            "timestamp": self._now_ts(),
+            "timestamp": 0,
         })
         self.messages[jid] = json.dumps(msgs)
 

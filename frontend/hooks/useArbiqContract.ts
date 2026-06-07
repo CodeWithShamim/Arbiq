@@ -19,6 +19,19 @@ import type { Job, FreelancerProfile, Proposal } from "@/lib/types";
 import { useError } from "@/lib/error-context";
 import { friendlyError } from "@/lib/errors";
 
+/**
+ * Convert a deadline string (date input "YYYY-MM-DD" or ISO datetime) to unix
+ * SECONDS. The contract no longer parses time on-chain (wall-clock reads break
+ * validator consensus), so the client supplies the timestamp as a plain integer.
+ * Returns 0 when unparseable (deadline then non-enforcing on-chain).
+ */
+function deadlineToUnix(deadline: string): number {
+  if (!deadline) return 0;
+  const ms = Date.parse(deadline);
+  if (Number.isNaN(ms)) return 0;
+  return Math.floor(ms / 1000);
+}
+
 function parseJobsJson(raw: unknown): Job[] {
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -274,7 +287,7 @@ export function usePostJob() {
     (params: { title: string; description: string; deadline: string; budgetEth: string }) =>
       send({
         functionName: "post_job",
-        args: [params.title, params.description, params.deadline],
+        args: [params.title, params.description, params.deadline, deadlineToUnix(params.deadline)],
         value: parseEther(params.budgetEth),
       }),
     [send]
@@ -284,7 +297,7 @@ export function usePostJob() {
     (params: { title: string; description: string; deadline: string; budgetEth: string }) =>
       simulate({
         functionName: "post_job",
-        args: [params.title, params.description, params.deadline],
+        args: [params.title, params.description, params.deadline, deadlineToUnix(params.deadline)],
       }),
     [simulate]
   );
@@ -482,7 +495,7 @@ export function usePostJobMilestones() {
     }) =>
       send({
         functionName: "post_job_milestones",
-        args: [params.title, params.description, params.deadline, params.milestoneTitles],
+        args: [params.title, params.description, params.deadline, params.milestoneTitles, deadlineToUnix(params.deadline)],
         value: parseEther(params.budgetEth),
       }),
     [send]
