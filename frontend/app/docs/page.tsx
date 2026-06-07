@@ -263,6 +263,8 @@ const STATUS_COLORS: Record<string, { fg: string; bg: string }> = {
   delivered: { fg: "#fb923c", bg: "rgba(251,146,60,0.12)"  },
   completed: { fg: "#22c55e", bg: "rgba(34,197,94,0.12)"   },
   disputed:  { fg: "#ef4444", bg: "rgba(239,68,68,0.12)"   },
+  cancelled: { fg: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
+  refunded:  { fg: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
 };
 
 function StatusPill({ status }: { status: string }) {
@@ -537,11 +539,11 @@ export default function DocsPage() {
 
           <div
             className="rounded-2xl p-6 mb-6 overflow-x-auto"
-            style={{ background: "rgba(0,0,0,0.35)", border: "1px solid var(--border-mid)" }}
+            style={{ background: "#0d1117", border: "1px solid rgba(124,58,237,0.25)" }}
           >
             <pre
               className="text-xs leading-relaxed"
-              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#d4b8ff", margin: 0 }}
+              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#e6edf3", margin: 0, whiteSpace: "pre", display: "inline-block", minWidth: "max-content" }}
             >
 {`Browser (Next.js 16 · React 19 · Tailwind CSS v4)
    │
@@ -592,10 +594,62 @@ GenLayer Bradbury Testnet  (Chain ID 4221)
             sub="All methods on arbiq.py — the GenLayer Intelligent Contract."
           />
 
+          {/* Deployment / version */}
+          <div
+            className="rounded-2xl p-5 mb-6"
+            style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)" }}
+          >
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest"
+                style={{ background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#86efac" }}
+              >
+                v2 · Active since Jun 7, 2026
+              </span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                GenLayer Bradbury Testnet · Chain ID 4221
+              </span>
+            </div>
+            {[
+              { v: "v2", addr: "0x83C58d17D0179CbDfDEE9F2F103C312f9193D18a", note: "Current — proposals, cancel & refunds, deadlines, disputes, profiles, ratings, security hardening", date: "Active since Jun 7, 2026", active: true },
+              { v: "v1", addr: "0x26517582E3B1E89F55823ba217191321992D9592", note: "Superseded — escrow, AI evaluation, milestones, chat", date: "", active: false },
+            ].map(({ v, addr, note, date, active }) => (
+              <div key={addr} className="flex items-start gap-3 py-1.5 text-sm">
+                <span className="text-[11px] font-bold w-6 shrink-0 mt-0.5" style={{ color: active ? "#a78bfa" : "var(--text-muted)" }}>{v}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a
+                      href={`https://explorer-bradbury.genlayer.com/address/${addr}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs break-all transition-colors"
+                      style={{ color: active ? "#c4b5fd" : "var(--text-muted)" }}
+                    >
+                      {addr}
+                    </a>
+                    {date && (
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                        style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#86efac" }}
+                      >
+                        {date}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{note}</p>
+                </div>
+              </div>
+            ))}
+            <p className="text-[11px] mt-3 pt-3" style={{ color: "var(--text-label-dim)", borderTop: "1px solid rgba(124,58,237,0.12)" }}>
+              GenLayer contracts are immutable — an upgrade means deploying a new contract and repointing the app. Jobs on a
+              previous deployment stay readable at its address.
+            </p>
+          </div>
+
           <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--text-secondary)" }}>
             The contract is a Python class inheriting from{" "}
-            <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}>gl.Contract</code>. State is stored in
-            two <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}>TreeMap</code> fields — GenLayer&apos;s
+            <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}>gl.Contract</code>. State is stored in{" "}
+            <code style={{ fontFamily: '"JetBrains Mono"', color: "#a78bfa" }}>TreeMap</code> fields — GenLayer&apos;s
             on-chain key-value store — with values serialized as JSON strings.
           </p>
 
@@ -604,6 +658,8 @@ class Arbiq(gl.Contract):
     job_count : u256                   # auto-incrementing ID counter
     jobs      : TreeMap[u256, str]     # job_id → JSON job object
     messages  : TreeMap[u256, str]     # job_id → JSON message array
+    proposals : TreeMap[u256, str]     # job_id → JSON proposal array
+    profiles  : TreeMap[str,  str]     # address → JSON profile object
 `} />
 
           <h3 className="text-sm font-bold uppercase tracking-widest mt-8 mb-4" style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}>
@@ -618,11 +674,39 @@ class Arbiq(gl.Contract):
             desc="Creates a new job. The GEN sent with the transaction is locked in escrow. Title must be ≥ 3 chars, description ≥ 20 chars. Job starts in OPEN status."
           />
           <MethodRow
+            method="post_job_milestones(title, description, deadline, milestone_titles)"
+            type="payable write"
+            typeColor="#a78bfa"
+            params="… · milestone_titles: list (2–5) · value: GEN (required)"
+            desc="Creates a milestone job. The escrow is split evenly across 2–5 milestones, each delivered and approved (and paid) independently."
+          />
+          <MethodRow
+            method="apply_to_job(job_id, note, bid)"
+            type="write"
+            typeColor="#38bdf8"
+            params="job_id: int · note: str (required) · bid: int (0 = at budget)"
+            desc="Freelancer submits a proposal for an OPEN job. One proposal per address. The bid is informational — escrow stays at the posted budget."
+          />
+          <MethodRow
+            method="accept_proposal(job_id, freelancer)"
+            type="write"
+            typeColor="#38bdf8"
+            params="job_id: int · freelancer: str"
+            desc="Client assigns one of the applicants. The address must have applied. Transitions status to ACTIVE. This is the primary assignment flow."
+          />
+          <MethodRow
             method="take_job(job_id)"
             type="write"
             typeColor="#38bdf8"
             params="job_id: int"
-            desc="Assigns the caller as the freelancer. Job must be OPEN. The caller cannot be the client. Transitions status to ACTIVE."
+            desc="Direct self-assignment (no-proposal fallback). Job must be OPEN; the caller cannot be the client. Transitions status to ACTIVE."
+          />
+          <MethodRow
+            method="cancel_job(job_id)"
+            type="write"
+            typeColor="#94a3b8"
+            params="job_id: int"
+            desc="Client cancels an OPEN (unassigned) job and the escrow is refunded. Status becomes CANCELLED."
           />
           <MethodRow
             method="submit_delivery(job_id, evidence_url, evidence_note)"
@@ -635,8 +719,8 @@ class Arbiq(gl.Contract):
             method="auto_evaluate(job_id)"
             type="non-deterministic write"
             typeColor="#ec4899"
-            params="job_id: int"
-            desc="Triggers AI consensus evaluation. Validators independently run an LLM prompt against the job spec + evidence URL. If approved, funds transfer to the freelancer automatically. Status becomes COMPLETED or DISPUTED."
+            params="job_id: int · client-only"
+            desc="Client triggers AI consensus evaluation. Validators independently fetch the evidence URL and run an LLM rubric. Untrusted submission content is fenced against prompt injection. If approved, funds transfer automatically. Status becomes COMPLETED or DISPUTED."
           />
           <MethodRow
             method="release_manually(job_id)"
@@ -646,11 +730,46 @@ class Arbiq(gl.Contract):
             desc="Client bypasses AI and approves payment directly. Job must be DELIVERED. Only the client can call this. Funds transfer immediately. Status becomes COMPLETED."
           />
           <MethodRow
+            method="resubmit_delivery(job_id, evidence_url, evidence_note)"
+            type="write"
+            typeColor="#f59e0b"
+            params="job_id: int · evidence_url: str (required) · evidence_note: str"
+            desc="Freelancer resubmits stronger evidence on a DISPUTED job (max 2 resubmits). Status returns to DELIVERED for re-evaluation."
+          />
+          <MethodRow
+            method="reclaim_expired(job_id)"
+            type="write"
+            typeColor="#94a3b8"
+            params="job_id: int"
+            desc="Client reclaims escrow when an assigned freelancer never delivered and the deadline has passed (ghost protection). Status becomes CANCELLED."
+          />
+          <MethodRow
+            method="reclaim_disputed(job_id)"
+            type="write"
+            typeColor="#94a3b8"
+            params="job_id: int"
+            desc="Client reclaims escrow on a DISPUTED job once the freelancer has exhausted all resubmits. Status becomes REFUNDED — funds are never permanently locked."
+          />
+          <MethodRow
+            method="rate_freelancer(job_id, stars, review)"
+            type="write"
+            typeColor="#fbbf24"
+            params="job_id: int · stars: int (1–5) · review: str"
+            desc="Client rates the freelancer on a COMPLETED job (one rating per job). The average is aggregated into the freelancer's on-chain profile."
+          />
+          <MethodRow
+            method="set_profile(display_name, bio, skills)"
+            type="write"
+            typeColor="#fbbf24"
+            params="display_name: str · bio: str · skills: list"
+            desc="Any address sets its own public profile. Reputation, earnings, and ratings are computed by the contract and can never be forged here."
+          />
+          <MethodRow
             method="send_message(job_id, content)"
             type="write"
             typeColor="#fb923c"
             params="job_id: int · content: str (max 500 chars)"
-            desc="Appends a message to the job's chat thread. Only the client or assigned freelancer can message. Job must not be OPEN (messaging starts after a freelancer takes the job)."
+            desc="Appends a message to the job's chat thread. Only the client or assigned freelancer can message. Job must not be OPEN (messaging starts after a freelancer is assigned)."
           />
 
           <h3 className="text-sm font-bold uppercase tracking-widest mt-8 mb-4" style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}>
@@ -669,7 +788,28 @@ class Arbiq(gl.Contract):
             type="view"
             typeColor="#71717a"
             params="→ str (JSON array)"
-            desc="Returns all jobs ever posted as a JSON array. Used by the browse page."
+            desc="Returns all jobs ever posted as a JSON array. Used by the browse page for client-side filtering and sorting."
+          />
+          <MethodRow
+            method="get_jobs_page(offset, limit)"
+            type="view"
+            typeColor="#71717a"
+            params="offset: int · limit: int (clamped ≤ 50) → str (JSON)"
+            desc="Paginated, newest-first job read. Returns { total, offset, limit, jobs }. Keeps reads bounded as the job count grows."
+          />
+          <MethodRow
+            method="get_proposals(job_id)"
+            type="view"
+            typeColor="#71717a"
+            params="job_id: int → str (JSON array)"
+            desc='Returns the proposals submitted for a job. Returns "[]" if none.'
+          />
+          <MethodRow
+            method="get_profile(address)"
+            type="view"
+            typeColor="#71717a"
+            params="address: str → str (JSON)"
+            desc="Returns the address's profile: display name, bio, skills, reputation score, completed/disputed counts, total earned, and average star rating."
           />
           <MethodRow
             method="get_jobs_by_client(address)"
@@ -712,39 +852,53 @@ class Arbiq(gl.Contract):
 
           <div
             className="rounded-2xl p-6 mb-6 overflow-x-auto"
-            style={{ background: "rgba(0,0,0,0.35)", border: "1px solid var(--border-mid)" }}
+            style={{ background: "#0d1117", border: "1px solid rgba(124,58,237,0.25)" }}
           >
             <pre
               className="text-xs leading-relaxed"
-              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#d4b8ff", margin: 0 }}
+              style={{ fontFamily: '"JetBrains Mono", monospace', color: "#e6edf3", margin: 0, whiteSpace: "pre", display: "inline-block", minWidth: "max-content" }}
             >
-{`post_job()  ──────────────────────────────► OPEN
-                                              │
-                                         take_job()
-                                              │
-                                              ▼
-                                           ACTIVE
-                                              │
-                                     submit_delivery()
-                                              │
-                                              ▼
-                                          DELIVERED
-                                         /          \\
-                              auto_evaluate()   release_manually()
-                                   /                    \\
-                       approved  /   rejected             \\
-                                 ▼         ▼               ▼
-                             COMPLETED  DISPUTED        COMPLETED
-                            (funds out) (funds held)   (funds out)`}
+{`  post_job()
+      │
+      ▼
+  ┌────────┐   cancel_job()                    ┌───────────┐
+  │  OPEN  │ ─────────────────────────────────►│ CANCELLED │ (escrow refunded)
+  └────────┘                                   └───────────┘
+      │
+      │  apply_to_job()  →  accept_proposal()      (or take_job)
+      ▼
+  ┌────────┐   reclaim_expired()  (deadline missed)
+  │ ACTIVE │ ──────────────────────────────────► CANCELLED  (escrow refunded)
+  └────────┘
+      │  submit_delivery()
+      ▼
+  ┌───────────┐
+  │ DELIVERED │
+  └───────────┘
+      │
+      ├─ auto_evaluate()  ─ approved ─►  COMPLETED   (freelancer paid)
+      │                  └ rejected ─►  DISPUTED
+      │
+      └─ release_manually()         ─►  COMPLETED   (freelancer paid)
+
+  COMPLETED  ── rate_freelancer() ──►  ★ on-chain rating
+
+  DISPUTED   ── resubmit_delivery() (≤ 2×) ──►  back to DELIVERED
+             └─ reclaim_disputed()  (resubmits used) ──►  REFUNDED`}
             </pre>
           </div>
 
           <div className="space-y-3 mb-6">
             {[
-              { status: "open",      who: "Anyone",                 action: "take_job()",           next: "active",    color: "#38bdf8" },
+              { status: "open",      who: "Freelancer / Client",    action: "apply_to_job() → accept_proposal()", next: "active",    color: "#38bdf8" },
+              { status: "open",      who: "Client",                 action: "cancel_job()",         next: "cancelled (refund)", color: "#94a3b8" },
               { status: "active",    who: "Assigned freelancer",    action: "submit_delivery()",    next: "delivered", color: "#f59e0b" },
+              { status: "active",    who: "Client (past deadline)", action: "reclaim_expired()",    next: "cancelled (refund)", color: "#94a3b8" },
               { status: "delivered", who: "Client",                 action: "auto_evaluate()",      next: "completed or disputed", color: "#fb923c" },
               { status: "delivered", who: "Client",                 action: "release_manually()",   next: "completed", color: "#22c55e" },
+              { status: "disputed",  who: "Freelancer (≤ 2×)",      action: "resubmit_delivery()",  next: "delivered", color: "#ef4444" },
+              { status: "disputed",  who: "Client (resubmits used)",action: "reclaim_disputed()",   next: "refunded",  color: "#94a3b8" },
+              { status: "completed", who: "Client",                 action: "rate_freelancer()",    next: "completed (★ rated)", color: "#fbbf24" },
             ].map((row) => (
               <div
                 key={row.action}
@@ -763,8 +917,10 @@ class Arbiq(gl.Contract):
 
           <Callout icon={AlertCircle} color="#ef4444" bg="rgba(239,68,68,0.07)" border="rgba(239,68,68,0.22)">
             <strong style={{ color: "#fca5a5" }}>DISPUTED status</strong> means the AI evaluated the delivery and
-            rejected it. The escrow funds remain locked in the contract. An appeal mechanism is on the roadmap but
-            not yet implemented.
+            rejected it. The freelancer can <code style={{ fontFamily: '"JetBrains Mono"', color: "#fca5a5" }}>resubmit_delivery()</code> with
+            stronger evidence up to twice. If all resubmits are exhausted without approval, the client can{" "}
+            <code style={{ fontFamily: '"JetBrains Mono"', color: "#fca5a5" }}>reclaim_disputed()</code> to refund the escrow —
+            funds are never permanently locked.
           </Callout>
 
           {/* ── AI EVALUATION ─────────────────────────────────────────────── */}
@@ -1236,10 +1392,40 @@ Explorer:      https://explorer-bradbury.genlayer.com
             desc="Sends a payable post_job transaction. params: { title, description, deadline, budgetEth }. budgetEth is converted to wei via parseEther(). AI evaluation timeout: 90s."
           />
           <HookRow
+            name="usePostJobMilestones"
+            sig=""
+            returns="{ postJobMilestones(params), txState, reset, isLoading }"
+            desc="Payable post_job_milestones transaction. params includes milestoneTitles: string[] (2–5). Escrow is split evenly across the milestones."
+          />
+          <HookRow
+            name="useApplyToJob"
+            sig=""
+            returns="{ applyToJob(jobId, note, bid?), txState, reset, isLoading }"
+            desc="Freelancer submits a proposal for an OPEN job. bid is optional and informational (defaults to the posted budget)."
+          />
+          <HookRow
+            name="useAcceptProposal"
+            sig=""
+            returns="{ acceptProposal(jobId, freelancer), txState, reset, isLoading }"
+            desc="Client assigns one of the applicants. The address must have applied. Transitions the job to ACTIVE."
+          />
+          <HookRow
+            name="useGetProposals"
+            sig=""
+            returns="useQuery → Proposal[]"
+            desc="Reads the proposals submitted for a job. Refetches every 30s and after any write."
+          />
+          <HookRow
             name="useTakeJob"
             sig=""
             returns="{ takeJob(jobId), txState, reset, isLoading }"
-            desc="Assigns the connected wallet as freelancer for the given job. Fails if job is not OPEN or caller is the client."
+            desc="Direct self-assignment fallback. Fails if job is not OPEN or caller is the client. The proposals flow is preferred."
+          />
+          <HookRow
+            name="useCancelJob"
+            sig=""
+            returns="{ cancelJob(jobId), txState, reset, isLoading }"
+            desc="Client cancels an OPEN job and reclaims the escrow."
           />
           <HookRow
             name="useSubmitDelivery"
@@ -1251,13 +1437,55 @@ Explorer:      https://explorer-bradbury.genlayer.com
             name="useAutoEvaluate"
             sig=""
             returns="{ autoEvaluate(jobId), txState, reset, isLoading }"
-            desc="Triggers AI consensus evaluation. Uses 300s retry timeout because LLM inference across validators takes 1–5 minutes."
+            desc="Client-only. Triggers AI consensus evaluation. Uses a 300s retry timeout because LLM inference across validators takes 1–5 minutes."
           />
           <HookRow
             name="useRelease"
             sig=""
             returns="{ release(jobId), txState, reset, isLoading }"
             desc="Client manually approves and pays the freelancer. Bypasses AI. Only callable by the client when status is DELIVERED."
+          />
+          <HookRow
+            name="useResubmitDelivery"
+            sig=""
+            returns="{ resubmitDelivery(jobId, url, note), txState, reset, isLoading }"
+            desc="Freelancer resubmits on a DISPUTED job (max 2×), returning it to DELIVERED for re-evaluation."
+          />
+          <HookRow
+            name="useReclaimExpired"
+            sig=""
+            returns="{ reclaimExpired(jobId), txState, reset, isLoading }"
+            desc="Client reclaims escrow on an ACTIVE job whose deadline passed without a delivery."
+          />
+          <HookRow
+            name="useReclaimDisputed"
+            sig=""
+            returns="{ reclaimDisputed(jobId), txState, reset, isLoading }"
+            desc="Client reclaims escrow on a DISPUTED job after the freelancer has exhausted all resubmits."
+          />
+          <HookRow
+            name="useRateFreelancer"
+            sig=""
+            returns="{ rateFreelancer(jobId, stars, review), txState, reset, isLoading }"
+            desc="Client rates the freelancer (1–5★) on a COMPLETED job. One rating per job."
+          />
+          <HookRow
+            name="useSetProfile"
+            sig=""
+            returns="{ setProfile(name, bio, skills), txState, reset, isLoading }"
+            desc="Updates the connected wallet's public profile (display name, bio, skill tags)."
+          />
+          <HookRow
+            name="useGetProfile"
+            sig=""
+            returns="useQuery → FreelancerProfile"
+            desc="Reads an address's profile: reputation, completed/disputed counts, total earned, and average star rating."
+          />
+          <HookRow
+            name="useGetJobsPage"
+            sig=""
+            returns="useQuery → { total, offset, limit, jobs }"
+            desc="Paginated, newest-first job read backed by the contract's get_jobs_page view."
           />
           <HookRow
             name="useSendMessage"

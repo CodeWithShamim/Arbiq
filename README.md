@@ -1,358 +1,226 @@
-# Arbiq — AI-Enforced Freelance Marketplace on GenLayer
+<div align="center">
 
-Arbiq is a decentralized freelance escrow platform where payment disputes are resolved autonomously by an AI judge running on the [GenLayer](https://genlayer.com) blockchain. Clients lock GEN tokens in escrow when posting a job; when a freelancer submits their delivery, the client can trigger an on-chain AI evaluation — multiple GenLayer validator nodes independently **fetch and read the evidence URL** using `gl.get_webpage()`, run an LLM prompt to score the work against the job spec, reach strict consensus via `gl.eq_principle.strict_eq`, and automatically release or withhold payment. No central arbitrator. No appeals process needed.
+# Arbiq
 
-> **Live network:** GenLayer Bradbury Testnet (Chain ID 4221)
-> **Contract address:** [`0x26517582E3B1E89F55823ba217191321992D9592`](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)
-> **Explorer:** [explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)
-> **Contract source:** `contracts/arbiq.py` — an Intelligent Contract written in Python
+### AI‑Enforced Freelance Escrow Marketplace on GenLayer
+
+Post a job, lock the budget in escrow, and let an on‑chain **AI judge** decide whether the delivered work earns the payout — no central arbitrator, no manual dispute desk.
+
+[![Network](https://img.shields.io/badge/network-GenLayer%20Bradbury-7c3aed)](https://explorer-bradbury.genlayer.com)
+[![Chain ID](https://img.shields.io/badge/chain%20id-4221-38bdf8)](https://explorer-bradbury.genlayer.com)
+[![Contract](https://img.shields.io/badge/contract-Python%20Intelligent%20Contract-22c55e)](contracts/arbiq.py)
+[![Tests](https://img.shields.io/badge/tests-130%20passing-22c55e)](test/test_arbiq.py)
+[![Frontend](https://img.shields.io/badge/frontend-Next.js%2016%20·%20React%2019-000000)](frontend)
+
+**Live contract:** [`0x83C58d17D0179CbDfDEE9F2F103C312f9193D18a`](https://explorer-bradbury.genlayer.com/address/0x83C58d17D0179CbDfDEE9F2F103C312f9193D18a) · **v2, active since Jun 7, 2026**
+<sub>previously [`0x26517582E3B1E89F55823ba217191321992D9592`](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592) — upgraded</sub>
+
+</div>
 
 ---
 
 ## Table of Contents
 
-- [Features](#features)
-- [Architecture Overview](#architecture-overview)
-- [Directory Structure](#directory-structure)
-- [Smart Contract Design](#smart-contract-design)
-- [Frontend Architecture](#frontend-architecture)
-- [Transaction & Consensus Flow](#transaction--consensus-flow)
-- [Notification System](#notification-system)
-- [On-Chain Chat](#on-chain-chat)
+- [What is Arbiq?](#what-is-arbiq)
+- [How It Works](#how-it-works)
+- [Feature Overview](#feature-overview)
+- [Job Lifecycle](#job-lifecycle)
+- [Architecture](#architecture)
+- [Repository Layout](#repository-layout)
+- [Security Model](#security-model)
 - [Getting Started](#getting-started)
-- [Testing & Quality Checks](#testing--quality-checks)
+- [Testing & Quality](#testing--quality)
 - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
 - [Contract Reference](#contract-reference)
 - [Tech Stack](#tech-stack)
+- [Roadmap](#roadmap)
 
 ---
 
-## Features
+## What is Arbiq?
 
-| Feature                 | Description                                                                                                                                     |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Escrow posting**      | Client sends GEN with the job post; funds are held in the contract                                                                              |
-| **AI evaluation**       | Validators fetch the evidence URL via `gl.get_webpage()`, run an LLM scoring prompt, and reach strict consensus via `gl.eq_principle.strict_eq` |
-| **Manual release**      | Client can bypass AI and approve payment directly                                                                                               |
-| **On-chain chat**       | Client and freelancer can message each other; messages stored in a `TreeMap` on-chain                                                           |
-| **Live notifications**  | Polls chain state every 15 s, fires in-app toasts on job status transitions                                                                     |
-| **Favorites**           | Save jobs locally with heart button; filter to saved view                                                                                       |
-| **Real-time tx status** | Consensus phase tracker — PROPOSING → COMMITTING → REVEALING → ACCEPTED                                                                         |
+Traditional freelance platforms (Fiverr, Upwork) rely on a **trusted middleman** to hold funds and adjudicate disputes. Arbiq replaces that middleman with a [GenLayer](https://genlayer.com) **Intelligent Contract** — a smart contract written in Python that can call an LLM and reach deterministic consensus across validator nodes.
+
+When a delivery is submitted, the client triggers an evaluation. Multiple validators **independently fetch the evidence URL**, run the same LLM scoring prompt against the job specification, and must agree on the result (`gl.eq_principle.strict_eq`). If the work passes, escrow is released to the freelancer automatically. If it fails, the funds stay locked and the freelancer can resubmit.
+
+Everything — escrow, proposals, milestones, ratings, chat, and the AI verdict — lives on‑chain.
 
 ---
 
-## Architecture Overview
+## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        User's Browser                        │
-│                                                             │
-│  Next.js 16 (App Router) · React 19 · Tailwind CSS v4      │
-│                                                             │
-│   ┌──────────┐  ┌──────────────┐  ┌──────────────────────┐ │
-│   │  Wagmi   │  │  RainbowKit  │  │   @tanstack/query    │ │
-│   │  + viem  │  │  (wallet UI) │  │   (server cache)     │ │
-│   └────┬─────┘  └──────┬───────┘  └──────────┬───────────┘ │
-│        │               │                      │             │
-└────────┼───────────────┼──────────────────────┼─────────────┘
-         │               │                      │
-         ▼               ▼                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    genlayer-js v1.1.8                        │
-│                                                             │
-│  createClient({ chain: testnetBradbury, provider, account })│
-│                                                             │
-│  readContract   → gen_call(type:"read")                     │
-│  writeContract  → eth_sendTransaction → consensus contract  │
-│  getTransaction → poll consensus status                     │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│              GenLayer Bradbury Testnet (Chain ID 4221)       │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │             Consensus Main Contract                  │   │
-│  │   Msgpack-encoded calldata → validator network       │   │
-│  │   PROPOSING → COMMITTING → REVEALING → ACCEPTED      │   │
-│  └──────────────────────────┬───────────────────────────┘   │
-│                             │                               │
-│  ┌──────────────────────────▼───────────────────────────┐   │
-│  │              arbiq.py (Intelligent Contract)         │   │
-│  │                                                      │   │
-│  │  State:                                              │   │
-│  │    job_count  : u256                                 │   │
-│  │    jobs       : TreeMap[u256, str]  (JSON blobs)     │   │
-│  │    messages   : TreeMap[u256, str]  (JSON arrays)    │   │
-│  │                                                      │   │
-│  │  AI method:                                          │   │
-│  │    auto_evaluate → gl.nondet.exec_prompt(prompt)     │   │
-│  │                  → gl.eq_principle.strict_eq(fn)     │   │
-│  │                  → emit_transfer if approved         │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+   CLIENT                        CONTRACT (escrow)                 FREELANCER
+     │                                  │                              │
+     │  post_job() + GEN value          │                              │
+     ├─────────────────────────────────▶│  budget locked in escrow     │
+     │                                  │◀─────────────────────────────┤ apply_to_job()
+     │  accept_proposal()               │                              │
+     ├─────────────────────────────────▶│  status: active              │
+     │                                  │◀─────────────────────────────┤ submit_delivery(url)
+     │  auto_evaluate()                 │                              │
+     ├─────────────────────────────────▶│                              │
+     │                          ┌───────┴────────┐                     │
+     │                          │  GenLayer       │   gl.get_webpage() │
+     │                          │  validators     │   gl.exec_prompt() │
+     │                          │  read evidence, │   strict_eq()      │
+     │                          │  score 0–10 ×5, │                    │
+     │                          │  reach consensus│                    │
+     │                          └───────┬────────┘                     │
+     │           approved → emit_transfer(budget) ─────────────────────▶ paid
+     │           rejected → status: disputed  (resubmit up to 2×)       │
+     │  rate_freelancer(★)              │                              │
+     └─────────────────────────────────▶│  on‑chain reputation updated │
 ```
 
 ---
 
-## Directory Structure
+## Feature Overview
+
+### Marketplace core
+| Feature | Description |
+| --- | --- |
+| **Escrow posting** | Client sends GEN with `post_job`; the budget is locked in the contract until resolved |
+| **Proposals & bidding** | Freelancers `apply_to_job` with a note + optional rate; the client reviews and picks one (`accept_proposal`) |
+| **Milestone jobs** | Split a budget across 2–5 milestones, each delivered and approved (and paid) independently |
+| **On‑chain chat** | Client ↔ freelancer messaging stored in a `TreeMap`, scoped to the two parties |
+| **Profiles** | Each address sets a display name, bio, and skill tags (`set_profile`) |
+
+### Payment & resolution
+| Feature | Description |
+| --- | --- |
+| **AI evaluation** | `auto_evaluate` runs a 5‑criteria LLM rubric across validators and releases payment on approval |
+| **Manual release** | Client can bypass the AI and pay directly (`release_manually`) |
+| **Cancel & refund** | Client cancels an unassigned job and reclaims escrow (`cancel_job`) |
+| **Deadline protection** | If an assigned freelancer never delivers past the deadline, the client reclaims escrow (`reclaim_expired`) |
+| **Dispute resolution** | After the freelancer exhausts resubmits, the client reclaims escrow (`reclaim_disputed`) — funds are never permanently locked |
+| **Ratings & reviews** | Client rates the freelancer 1–5★ on completion; the average is aggregated on‑chain (`rate_freelancer`) |
+| **Reputation** | On‑chain completion ratio + average star rating, shown across the UI |
+
+### Experience
+| Feature | Description |
+| --- | --- |
+| **Live consensus tracker** | PROPOSING → COMMITTING → REVEALING → ACCEPTED, surfaced during AI evaluation |
+| **Notifications** | Polls chain state and fires in‑app toasts on status transitions |
+| **Evidence preview** | Server‑side URL/GitHub preview with SSRF protection |
+| **Favorites & filters** | Save jobs locally; filter by status, budget, deadline, and keyword |
+| **Light / dark theme** | Persisted theme toggle |
+
+---
+
+## Job Lifecycle
+
+```
+                cancel_job                       reclaim_expired
+              ┌───────────┐                    ┌───────────────┐
+              ▼           │                    ▼               │
+  ┌────────┐  post   ┌────┴───┐  accept   ┌────┴────┐  submit  ┌───────────┐
+  │ (none) │ ──────▶ │  open  │ ────────▶ │ active  │ ───────▶ │ delivered │
+  └────────┘         └────────┘ proposal  └─────────┘ delivery └─────┬─────┘
+                                                                     │
+                                            auto_evaluate / release  │
+                                          ┌──────────────────────────┤
+                                          ▼                          ▼
+                                    ┌───────────┐  resubmit    ┌───────────┐
+                                    │ disputed  │ ◀──────────  │ completed │ ──▶ rate_freelancer
+                                    └─────┬─────┘   (≤ 2×)     └───────────┘
+                          reclaim_disputed │
+                                          ▼
+                                    ┌───────────┐
+                                    │ refunded  │
+                                    └───────────┘
+```
+
+| Status | Meaning |
+| --- | --- |
+| `open` | Posted, escrow locked, accepting proposals |
+| `active` | A freelancer is assigned and working |
+| `delivered` | Evidence submitted, awaiting client decision |
+| `completed` | Approved (AI or manual); freelancer paid |
+| `disputed` | AI rejected the delivery; resubmit available |
+| `cancelled` | Client cancelled an open job, or reclaimed a missed‑deadline job; escrow refunded |
+| `refunded` | Dispute unresolved after max resubmits; escrow refunded to client |
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────── Browser ────────────────────────────┐
+│  Next.js 16 (App Router) · React 19 · Tailwind v4                │
+│                                                                  │
+│   Wagmi + viem ──┐    RainbowKit ──┐    @tanstack/react-query ──┐│
+│   (tx signing)   │    (wallet UI)  │    (read cache)            ││
+└──────────────────┼─────────────────┼────────────────────────────┘
+                   │                 │
+                   ▼                 ▼
+        ┌──────────────────────────────────────┐
+        │   genlayer-js  (RPC client)           │
+        │   read_contract / write_contract      │
+        └───────────────────┬──────────────────┘
+                            │  JSON‑RPC
+                            ▼
+        ┌──────────────────────────────────────┐
+        │   GenLayer Bradbury Testnet           │
+        │   ┌────────────────────────────────┐  │
+        │   │  Arbiq Intelligent Contract     │ │
+        │   │  contracts/arbiq.py (Python)    │ │
+        │   │  • TreeMap state                │ │
+        │   │  • gl.get_webpage()             │ │
+        │   │  • gl.exec_prompt()             │ │
+        │   │  • gl.eq_principle.strict_eq()  │ │
+        │   └────────────────────────────────┘  │
+        │   5 validators reach consensus         │
+        └──────────────────────────────────────┘
+
+Next.js API routes (server‑side, SSRF‑guarded):
+  • /api/preview-url    — evidence link / GitHub preview
+  • /api/explorer-txs   — contract transaction feed
+```
+
+---
+
+## Repository Layout
 
 ```
 arbiq-freelance/
-│
 ├── contracts/
-│   └── arbiq.py                  # Intelligent Contract (Python, GenLayer)
-│
-├── deploy/
-│   ├── deployBradbury.mjs        # Node.js deploy script (uses frontend's genlayer-js)
-│   └── deployScript.ts           # Legacy deploy script
-│
+│   └── arbiq.py                  # The Intelligent Contract (escrow, AI, proposals, ratings)
 ├── test/
-│   ├── test_arbiq.py             # 105 unit tests — gltest direct mode (real GenVM SDK)
-│   └── mock_genlayer.py          # Compatibility shim (no longer active)
-│
-├── frontend/                     # Next.js application (npm workspace)
-│   │
+│   └── test_arbiq.py             # 130 unit tests via the gltest direct runner
+├── deploy/
+│   ├── deployScript.ts           # Deploy helper
+│   └── deployBradbury.mjs        # Bradbury testnet deploy (PRIVATE_KEY env)
+├── frontend/
 │   ├── app/
-│   │   ├── layout.tsx            # Root layout — fonts, cursor, providers
-│   │   ├── globals.css           # Design system — tokens, animations, utilities
-│   │   ├── page.tsx              # Landing page — hero, marquee, features, stats
-│   │   ├── not-found.tsx         # Custom 404
-│   │   ├── dashboard/
-│   │   │   └── page.tsx          # User dashboard — posted & active jobs
-│   │   └── jobs/
-│   │       ├── page.tsx          # Browse jobs — search, filter, favorites
-│   │       ├── new/page.tsx      # Post a job form (payable)
-│   │       └── [id]/page.tsx     # Job detail — status-driven action panels
-│   │
-│   ├── components/
-│   │   ├── Navbar.tsx            # Fixed navbar — brand, nav links, notifications, wallet
-│   │   ├── Footer.tsx            # Site footer — social links, product links
-│   │   ├── JobCard.tsx           # Job card — budget, status badge, NEW tag, heart
-│   │   ├── JobChat.tsx           # On-chain chat panel — optimistic UI, bubbles
-│   │   ├── NotificationCenter.tsx # Bell icon, dropdown, toast notifications
-│   │   ├── PostJobFAB.tsx        # Floating action button — appears on scroll
-│   │   ├── StatusTimeline.tsx    # Visual 4-step job progress stepper
-│   │   ├── ConsensusTxStatus.tsx # Live consensus phase tracker
-│   │   ├── Cursor.tsx            # Custom lerp cursor (dot + ring)
-│   │   └── ui/
-│   │       ├── badge.tsx         # StatusBadge component
-│   │       ├── input.tsx         # Styled input
-│   │       └── textarea.tsx      # Styled textarea
-│   │
-│   ├── hooks/
-│   │   ├── useArbiqContract.ts   # All read & write contract hooks
-│   │   ├── useNotifications.ts   # 15s polling, state diffing, toast dispatch
-│   │   ├── useLocalFavorites.ts  # localStorage-backed job favorites
-│   │   ├── useScrollReveal.ts    # IntersectionObserver scroll animations
-│   │   └── useCountUp.ts         # Animated number counter
-│   │
-│   ├── lib/
-│   │   ├── genlayer/
-│   │   │   └── client.ts         # genLayerClient, CONTRACT_ADDRESS, readContract()
-│   │   ├── types.ts              # Job, JobStatus TypeScript types
-│   │   ├── utils.ts              # truncateAddress, formatBudget, formatDeadline
-│   │   └── theme-context.tsx     # Dark / light theme context + toggle
-│   │
-│   ├── tailwind.config.ts        # Font families, animation tokens
-│   ├── postcss.config.mjs        # Tailwind v4 PostCSS plugin
-│   └── package.json              # Frontend dependencies
-│
-├── package.json                  # Root workspace — deploy & dev scripts
-├── requirements.txt              # Python deps for contract testing
-├── gltest.config.yaml            # GenLayer test network config
-└── pyrightconfig.json            # Pyright config for arbiq.py
+│   │   ├── jobs/                  # Listing, detail, post‑a‑job
+│   │   ├── profile/[address]/    # Public profile + editor
+│   │   ├── dashboard/ analytics/ explorer/ docs/
+│   │   └── api/                  # preview-url, explorer-txs (server)
+│   ├── components/               # JobCard, ProposalsPanel, RateFreelancerPanel, …
+│   ├── hooks/                    # useArbiqContract (read/write hooks), useJobs, …
+│   └── lib/                      # genlayer client, types, utils
+├── gltest.config.yaml            # Test network config
+└── package.json                  # Root scripts (deploy / test / dev)
 ```
 
 ---
 
-## Smart Contract Design
+## Security Model
 
-`contracts/arbiq.py` is a **GenLayer Intelligent Contract** — a Python class that runs inside a sandboxed EVM-compatible runtime. Unlike Solidity, it can make non-deterministic calls (LLM, HTTP) that validators reach consensus on.
+Arbiq handles real escrow, so the contract and server routes are hardened against the obvious attacks:
 
-### State
-
-```python
-class Arbiq(gl.Contract):
-    job_count: u256                  # Auto-incrementing job ID counter
-    jobs:      TreeMap[u256, str]    # job_id → JSON-encoded Job object
-    messages:  TreeMap[u256, str]    # job_id → JSON-encoded message array
-```
-
-Jobs are stored as JSON strings in a `TreeMap` (GenLayer's on-chain key-value store). Each job object contains:
-
-```json
-{
-  "id": 0,
-  "title": "...",
-  "description": "...",
-  "budget": 1000000000000000000,
-  "deadline": "2026-06-01",
-  "client": "0xabc...",
-  "freelancer": "0xdef...",
-  "status": "open | active | delivered | completed | disputed",
-  "evidence_url": "https://...",
-  "evidence_note": "...",
-  "ai_reasoning": "..."
-}
-```
-
-### Job Lifecycle
-
-```
-POST JOB (payable)
-     │
-     ▼
-  [open] ──── take_job() ────► [active]
-                                  │
-                            submit_delivery()
-                                  │
-                                  ▼
-                            [delivered]
-                           /            \
-               auto_evaluate()      release_manually()
-                     │                      │
-              AI consensus               Client
-            /             \               │
-     approved           rejected          │
-         │                  │             │
-         ▼                  ▼             ▼
-    [completed]         [disputed]    [completed]
-   funds released     funds held    funds released
-```
-
-### AI Evaluation
-
-`auto_evaluate` is the only **non-deterministic** method. It uses GenLayer's `gl.eq_principle.strict_eq` to ensure all validator nodes independently run the same LLM prompt and must agree on the result before the transaction is finalized:
-
-```python
-def evaluate() -> str:
-    prompt = f"""You are an impartial AI judge...
-    Job: {title} / {description}
-    Evidence: {evidence_url}
-    Note: {evidence_note}
-    Respond ONLY with: {{"approved": bool, "reasoning": str}}"""
-    return gl.nondet.exec_prompt(prompt)
-
-result_str = gl.eq_principle.strict_eq(evaluate)
-```
-
-If approved, the contract calls `emit_transfer` to release the escrowed GEN to the freelancer.
-
----
-
-## Frontend Architecture
-
-### Data Flow
-
-```
-Contract (on-chain)
-      │
-      │  readContract() — gen_call(type:"read") via genLayerClient
-      ▼
-useArbiqContract.ts (React Query)
-      │
-      │  refetchInterval: 10–15s
-      ▼
-Page Components (app/jobs/[id]/page.tsx, etc.)
-      │
-      │  render
-      ▼
-UI Components (JobCard, StatusTimeline, JobChat, …)
-```
-
-### Write Transaction Flow
-
-```
-User action (e.g. "Accept Job")
-      │
-      ▼
-useContractWrite.send()
-      │
-      │  createClient({ provider: walletClient, account: address })
-      │  writeContract() → msgpack-encode → eth_sendTransaction
-      ▼
-Wallet (MetaMask / WalletConnect) signs tx
-      │
-      ▼
-GenLayer consensus contract receives tx
-      │
-      │  pollStatus() — getTransaction() every 1s
-      ▼
-txState: pending → finalizing (PROPOSING…REVEALED) → finalized
-      │
-      │  on finalized: queryClient.invalidateQueries(["arbiq"])
-      ▼
-UI re-fetches latest state
-```
-
-### Key Design Decisions
-
-**`account` must be a plain address string** — not an account object. genlayer-js checks `isAddress` to decide whether to route signing through the browser wallet provider. Passing an object bypasses the wallet and tries to use the RPC node as a signer, which fails.
-
-**1-second polling over `waitForTransactionReceipt`** — The library's built-in receipt waiter has a fixed 3s sleep with no live status updates. The custom `pollStatus` loop calls `getTransaction` every 1s, surfaces `consensusStatus` on every tick (PROPOSING, COMMITTING, REVEALING), and reaches finality ~3x faster.
-
-**Optimistic chat messages** — Messages are added to local state immediately with `optimistic: true`, shown with a spinner timestamp, and deduped against confirmed messages by matching `sender + content`. When `txState.status === "finalized"`, optimistic entries are cleared and the query is invalidated.
-
----
-
-## Transaction & Consensus Flow
-
-GenLayer transactions go through 5 phases before finalization:
-
-| Phase             | Status Code  | Description                                 |
-| ----------------- | ------------ | ------------------------------------------- |
-| Submitted         | `PENDING`    | Tx in mempool, waiting for leader validator |
-| Leader runs       | `PROPOSING`  | Leader validator executes contract method   |
-| Validators lock   | `COMMITTING` | Validators hash their results               |
-| Validators reveal | `REVEALING`  | Validators reveal and compare results       |
-| Finalized         | `ACCEPTED`   | Supermajority agreed — state committed      |
-
-The `ConsensusTxStatus` component renders each phase as a live step-by-step tracker with connecting lines and colored dots (done / active / waiting).
-
-AI evaluation (`auto_evaluate`) takes 1–5 minutes because each validator independently calls an LLM. All other writes typically finalize in 15–45 seconds.
-
----
-
-## Notification System
-
-`hooks/useNotifications.ts` polls the chain every 15 seconds using `get_jobs_by_client` and `get_jobs_by_freelancer`, then diffs the results against a `useRef` snapshot to detect job status transitions.
-
-### Notification Types
-
-| Type        | Color | Trigger                                   |
-| ----------- | ----- | ----------------------------------------- |
-| `approved`  | Green | Delivered → Completed (funds released)    |
-| `disputed`  | Red   | Delivered → Disputed (AI rejected)        |
-| `delivered` | Blue  | Active → Delivered (freelancer submitted) |
-| `taken`     | Amber | Open → Active (freelancer accepted)       |
-| `stale`     | Grey  | Job open > 48 hours with no taker         |
-
-Notifications persist to `localStorage` under `arbiq:notifications` (latest 100 retained). The `NotificationCenter` renders a bell icon in the navbar with an unread badge count. New notifications also fire a slide-in toast (bottom-right, 5s auto-dismiss) that navigates to the relevant job on click.
-
----
-
-## On-Chain Chat
-
-Each job has a message thread stored in `messages: TreeMap[u256, str]` — a JSON array of message objects keyed by `job_id`. Messages are only accessible to the assigned client and freelancer.
-
-```python
-{
-  "sender":    "0xabc...",
-  "content":   "...",         # truncated to 500 chars on-chain
-  "role":      "client | freelancer",
-  "timestamp": 1716000000     # unix seconds from gl.message.timestamp
-}
-```
-
-`JobChat.tsx` renders a fixed 440px chat panel with:
-
-- Bubble layout (mine = violet right, theirs = surface left)
-- Date dividers and role labels (YOU / CLIENT / FREELANCER)
-- Optimistic message insertion with "confirming…" spinner
-- Auto-resizing textarea, Enter to send / Shift+Enter for newline
-- 10-second polling to pick up the other party's messages
+| Surface | Protection |
+| --- | --- |
+| **AI payout abuse** | `auto_evaluate` is **client‑only** — a freelancer cannot force a payout on their own submission |
+| **Prompt injection** | The evidence URL, note, and fetched page content are fenced as `<untrusted>` data; the judge is explicitly told to treat them as data, never instructions |
+| **Escrow isolation** | Each job tracks its own `escrow_remaining`; a payout can never draw from funds escrowed for another job |
+| **Locked funds** | Every path has an exit — cancel (open), reclaim (missed deadline), reclaim (exhausted disputes) — so escrow is never permanently stuck |
+| **Reputation forgery** | `set_profile` can only edit name/bio/skills; reputation, earnings, and ratings are computed by the contract |
+| **SSRF** (`/api/preview-url`) | Blocks private/loopback/link‑local/metadata IPs, re‑checks the DNS‑resolved address, and restricts to standard ports |
+| **Query injection** (`/api/explorer-txs`) | `page`/`limit` are clamped to bounded integers and the address is URL‑encoded |
+| **Wallet keys** | All writes are signed client‑side by the user's wallet; the app never holds a private key. `PRIVATE_KEY` is used only by the server‑side deploy script |
 
 ---
 
@@ -360,229 +228,203 @@ Each job has a message thread stored in `messages: TreeMap[u256, str]` — a JSO
 
 ### Prerequisites
 
-- Node.js 20+
-- Python 3.13+ (for contract tests)
-- A funded wallet on GenLayer Bradbury Testnet
+- **Node.js** ≥ 20 and **npm**
+- **Python** ≥ 3.11 (the contract toolchain targets 3.13)
+- A GenLayer‑compatible wallet (e.g. MetaMask) funded with Bradbury testnet GEN
 
-### Install
+### 1. Clone and install
 
 ```bash
-# Clone the repo
-git clone https://github.com/CodeWithShamim/Arbiq.git
+git clone <repo-url> arbiq-freelance
 cd arbiq-freelance
 
-# Install frontend dependencies
-npm run install:frontend
+# Python toolchain (contract + tests)
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
-# Install Python deps (for contract testing)
-python -m venv .venv
-.venv/bin/pip install -r requirements.txt
+# Frontend
+npm run install:frontend
 ```
 
-### Run locally
+### 2. Configure the frontend
+
+Create `frontend/.env.local` with the keys below (see [Environment Variables](#environment-variables) for details):
 
 ```bash
-# Start the Next.js dev server
-npm run dev
-# → http://localhost:3000
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x83C58d17D0179CbDfDEE9F2F103C312f9193D18a
+NEXT_PUBLIC_CHAIN_ID=4221
+NEXT_PUBLIC_GENLAYER_RPC_URL=https://testnet-bradbury.genlayer.com/api
+NEXT_PUBLIC_CHAIN_RPC_URL=https://testnet-bradbury.genlayer.com/api
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<your-walletconnect-project-id>
 ```
+
+### 3. Run the dev server
+
+```bash
+npm run dev          # → http://localhost:3000
+```
+
+Connect your wallet, switch to the GenLayer Bradbury network (Chain ID `4221`), and post your first job.
 
 ---
 
-## Testing & Quality Checks
+## Testing & Quality
 
-### Run everything at once
-
-```bash
-npm run check
-# 1. genvm-lint — AST safety checks on contracts/arbiq.py
-# 2. gltest    — 105 unit tests via gltest direct mode
-```
-
-Both steps must pass. The lint runs first and fails fast so you don't wait for tests on a broken contract.
-
-### Individual commands
+The contract has **130 unit tests** running against the real GenVM SDK via the `gltest` direct runner — covering escrow accounting, proposals, deadline refunds, dispute resolution, ratings, and the security guards.
 
 ```bash
-# Fast AST lint only (no SDK download needed, ~0.1s)
-npm run lint
-
-# Full test suite — 105 tests, real GenVM SDK, ~2s
-npm test
+npm run test     # run the full contract test suite
+npm run check    # lint the contract + run the suite
+npm run build    # production build of the frontend (type‑checked)
 ```
 
-### Test suite overview
-
-Tests live in `test/test_arbiq.py` and run with **gltest direct mode** — the real `genlayer-py-std` SDK is loaded locally from a GitHub release cache. No testnet connection required.
-
-| Class                         | Tests   | What's covered                                                                    |
-| ----------------------------- | ------- | --------------------------------------------------------------------------------- |
-| `TestPostJob`                 | 11      | Validation, field defaults, whitespace stripping                                  |
-| `TestPostJobMilestones`       | 9       | Budget splitting, remainder, title stripping, min/max guards                      |
-| `TestTakeJob`                 | 6       | Happy path, self-take, double-take, nonexistent job                               |
-| `TestSubmitDelivery`          | 7       | Happy path, unauthorized, open job, empty/whitespace URL                          |
-| `TestSubmitMilestoneDelivery` | 9       | Happy path, guards, invalid index, non-milestone job                              |
-| `TestApproveMilestone`        | 9       | Single approval + payment, all-approved completion, guards, profile update        |
-| `TestAutoEvaluate`            | 15      | Approve/reject, score avg logic, avg=6 boundary, AI JSON parsing, profile updates |
-| `TestReleaseManually`         | 6       | Payment release, guards, reasoning field, profile update                          |
-| `TestResubmitDelivery`        | 6       | Resubmit, field clearing, max-2 cap, guards                                       |
-| `TestMessaging`               | 8       | Client/freelancer send, accumulation, 500-char truncation, open-job guard         |
-| `TestGetProfile`              | 5       | Defaults, completion/dispute updates, mixed reputation score                      |
-| `TestViewMethods`             | 9       | All view helpers, case-insensitive filtering                                      |
-| `TestFullLifecycle`           | 6       | End-to-end: AI approval, manual release, dispute→resubmit→approve, milestones     |
-| **Total**                     | **105** |                                                                                   |
-
-### How AI / web mocks work
-
-`auto_evaluate` calls `gl.nondet.exec_prompt` and `gl.get_webpage`. In tests these are intercepted by the VM mock layer:
-
-```python
-# Mock LLM response
-direct_vm.mock_llm(".*", json.dumps({
-    "approved": True,
-    "reasoning": "Work looks good.",
-    "scores": {"relevance": 8, "completeness": 8, "quality": 8, "meets_spec": 8, "professional": 8},
-    "confidence": "high",
-}))
-
-# Mock URL fetch
-direct_vm.mock_web(".*github.*", {"method": "GET", "status": 200, "body": "# Project\nDone."})
-
-contract.auto_evaluate(job_id)
 ```
-
-Patterns are regex — `".*"` matches any prompt/URL. Call `direct_vm.clear_mocks()` between phases if the same test needs different responses.
-
-### Score-based approval logic
-
-The contract ignores the `"approved"` field from the LLM and recomputes it from the 5 numeric scores:
-
+$ npm run test
+130 passed in 2.0s
 ```
-avg = (relevance + completeness + quality + meets_spec + professional) / 5
-approved = avg >= 6.0
-```
-
-Tests cover: avg = 4.6 → disputed, avg = 6.0 → completed, avg = 8.0 → completed.
 
 ---
 
 ## Environment Variables
 
-Create `frontend/.env.local`:
+All frontend variables are `NEXT_PUBLIC_*` (client‑safe by design — no server secrets are exposed). Create `frontend/.env.local`:
 
-```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x<deployed-contract-address>
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<your-walletconnect-project-id>
-```
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_CONTRACT_ADDRESS` | Deployed Arbiq contract address |
+| `NEXT_PUBLIC_CHAIN_ID` | `4221` (GenLayer Bradbury) |
+| `NEXT_PUBLIC_GENLAYER_RPC_URL` | GenLayer RPC endpoint |
+| `NEXT_PUBLIC_CHAIN_RPC_URL` | Chain RPC endpoint used by the wallet connector |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect project ID (wallet modal) |
 
-Get a free WalletConnect Project ID at [cloud.walletconnect.com](https://cloud.walletconnect.com).
+For deployment only (never committed):
+
+| Variable | Description |
+| --- | --- |
+| `PRIVATE_KEY` | Deployer key, used solely by `deploy/deployBradbury.mjs` |
+
+> `.env*` files are gitignored. Do not commit secrets.
 
 ---
 
 ## Deployment
 
-The deploy script imports genlayer-js from the frontend workspace (v1.1.8) which includes the Bradbury chain definition.
-
 ```bash
-PRIVATE_KEY=0x<your-funded-key> node deploy/deployBradbury.mjs
+# Deploy to the default network
+npm run deploy
+
+# Deploy to Bradbury testnet
+npm run deploy:bradbury
+
+# Or run the explicit Bradbury script
+PRIVATE_KEY=0x<your-key> node deploy/deployBradbury.mjs
 ```
 
-The script will:
-
-1. Read and encode `contracts/arbiq.py`
-2. Submit a deploy transaction to Bradbury testnet
-3. Poll for consensus (up to 4 minutes)
-4. Extract the deployed contract address from the receipt
-5. Automatically update `frontend/.env` and `frontend/.env.local`
-6. Print the new `NEXT_PUBLIC_CONTRACT_ADDRESS`
-
-After deployment, restart the dev server to pick up the new address.
-
-> **Never store your private key in a file.** Always pass it as an environment variable in the terminal.
+After deploying, update `NEXT_PUBLIC_CONTRACT_ADDRESS` in `frontend/.env.local` and rebuild.
 
 ---
 
 ## Contract Reference
 
-### Write Methods
+> `contracts/arbiq.py` — Python Intelligent Contract. State is stored in `TreeMap` collections; jobs are JSON‑encoded per id.
 
-| Method                                                                          | Payable | Description                                            |
-| ------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
-| `post_job(title, description, deadline)`                                        | Yes     | Create a job; GEN sent is held in escrow               |
-| `post_job_milestones(title, description, deadline, milestone_titles)`           | Yes     | Create a job with milestone-based payments             |
-| `take_job(job_id)`                                                              | No      | Freelancer accepts an open job                         |
-| `submit_delivery(job_id, evidence_url, evidence_note)`                          | No      | Freelancer marks job as delivered                      |
-| `submit_milestone_delivery(job_id, milestone_idx, evidence_url, evidence_note)` | No      | Submit delivery for a specific milestone               |
-| `approve_milestone(job_id, milestone_idx)`                                      | No      | Client approves and pays out a milestone               |
-| `auto_evaluate(job_id)`                                                         | No      | Trigger AI consensus evaluation (non-deterministic)    |
-| `release_manually(job_id)`                                                      | No      | Client manually releases payment to freelancer         |
-| `resubmit_delivery(job_id, evidence_url, evidence_note)`                        | No      | Freelancer resubmits after AI dispute (max 2 attempts) |
-| `send_message(job_id, content)`                                                 | No      | Append a message to the job's chat thread              |
+### Deployments
 
-### Read Methods (View)
+| Version | Address | Status |
+| --- | --- | --- |
+| **v2** (current) | [`0x83C58d17D0179CbDfDEE9F2F103C312f9193D18a`](https://explorer-bradbury.genlayer.com/address/0x83C58d17D0179CbDfDEE9F2F103C312f9193D18a) | ✅ **Active since Jun 7, 2026** |
+| v1 | [`0x26517582E3B1E89F55823ba217191321992D9592`](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592) | ⬆️ Superseded |
 
-| Method                            | Returns     | Description                      |
-| --------------------------------- | ----------- | -------------------------------- |
-| `get_job(job_id)`                 | JSON string | Single job object                |
-| `get_all_jobs()`                  | JSON string | Array of all jobs                |
-| `get_jobs_by_client(address)`     | JSON string | Jobs posted by address           |
-| `get_jobs_by_freelancer(address)` | JSON string | Jobs taken by address            |
-| `get_messages(job_id)`            | JSON string | Chat messages for a job          |
-| `get_job_count()`                 | int         | Total number of jobs ever posted |
-| `get_profile(address)`            | JSON string | Freelancer reputation profile    |
+> GenLayer contracts are immutable once deployed, so an "upgrade" means deploying a new contract and repointing `NEXT_PUBLIC_CONTRACT_ADDRESS` at it. Jobs created on a previous deployment remain readable at its address.
+
+### Version History
+
+#### v2 — Marketplace & Security &nbsp;<sub>`0x83C5…D18a` · active since Jun 7, 2026</sub>
+- **Proposals & bidding** — freelancers apply, the client picks (`apply_to_job`, `accept_proposal`)
+- **Cancel & refunds** — `cancel_job` for open jobs; escrow returned
+- **Deadline protection** — `reclaim_expired` when an assigned freelancer ghosts past the deadline
+- **Dispute resolution** — `reclaim_disputed` after resubmits are exhausted (no permanently‑locked funds)
+- **Profiles** — `set_profile` (display name, bio, skills)
+- **Ratings & reviews** — `rate_freelancer` (1–5★), aggregated on‑chain
+- **Pagination** — `get_jobs_page` (newest‑first, clamped) replaces unbounded reads
+- **Security hardening** — client‑only `auto_evaluate`, prompt‑injection fencing, per‑job escrow isolation, anti‑reputation‑forgery
+
+#### v1 — Core Escrow &nbsp;<sub>`0x2651…D9592`</sub>
+- On‑chain job posting with GEN escrow
+- AI consensus evaluation (`auto_evaluate`) + manual release
+- Milestone jobs (split escrow, per‑milestone approval)
+- Resubmit‑on‑dispute (up to 2×)
+- On‑chain client ↔ freelancer chat
+- Freelancer reputation score
+
+### Writes
+
+| Method | Caller | Description |
+| --- | --- | --- |
+| `post_job(title, description, deadline)` *(payable)* | anyone | Create a job; the sent GEN is escrowed |
+| `post_job_milestones(title, description, deadline, milestone_titles)` *(payable)* | anyone | Create a milestone job (2–5 milestones); budget split evenly |
+| `apply_to_job(job_id, note, bid)` | freelancer | Submit a proposal (note + optional bid) |
+| `accept_proposal(job_id, freelancer)` | client | Assign a freelancer from the proposals |
+| `take_job(job_id)` | freelancer | Direct self‑assignment (no‑proposal fallback) |
+| `cancel_job(job_id)` | client | Cancel an open job; refund escrow |
+| `submit_delivery(job_id, evidence_url, evidence_note)` | freelancer | Submit work for an active job |
+| `submit_milestone_delivery(job_id, idx, url, note)` | freelancer | Submit a milestone delivery |
+| `approve_milestone(job_id, idx)` | client | Approve & pay a milestone |
+| `auto_evaluate(job_id)` | **client** | Trigger AI consensus evaluation |
+| `release_manually(job_id)` | client | Approve & pay without the AI |
+| `resubmit_delivery(job_id, url, note)` | freelancer | Resubmit after a dispute (max 2×) |
+| `reclaim_expired(job_id)` | client | Reclaim escrow on a missed deadline |
+| `reclaim_disputed(job_id)` | client | Reclaim escrow after resubmits are exhausted |
+| `rate_freelancer(job_id, stars, review)` | client | Rate a completed job (1–5★) |
+| `set_profile(display_name, bio, skills)` | self | Update your public profile |
+| `send_message(job_id, content)` | client/freelancer | Post an on‑chain message |
+
+### Views
+
+| Method | Returns |
+| --- | --- |
+| `get_job(job_id)` | A single job (JSON) |
+| `get_all_jobs()` | All jobs (JSON array) |
+| `get_jobs_page(offset, limit)` | Paginated jobs, newest‑first (`limit` clamped to ≤ 50) |
+| `get_jobs_by_client(client)` | Jobs posted by an address |
+| `get_jobs_by_freelancer(freelancer)` | Jobs worked by an address |
+| `get_proposals(job_id)` | Proposals for a job |
+| `get_messages(job_id)` | Chat messages for a job |
+| `get_profile(address)` | Reputation, ratings, name/bio/skills |
+| `get_job_count()` | Total jobs ever posted |
+
+### AI evaluation rubric
+
+`auto_evaluate` scores the submission 0–10 on five criteria — **Relevance, Completeness, Quality, Meets Spec, Professional** — and approves when the average is ≥ 6. Validators run the same prompt over the same fetched evidence and must reach strict consensus before any payout executes.
 
 ---
 
 ## Tech Stack
 
-| Layer                     | Technology                                                             |
-| ------------------------- | ---------------------------------------------------------------------- |
-| Blockchain                | GenLayer Bradbury Testnet (EVM-compatible, Chain ID 4221)              |
-| Intelligent Contract      | Python 3 · genlayer SDK (`gl.*` primitives)                            |
-| Contract language runtime | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`     |
-| Frontend framework        | Next.js 16 (App Router) · React 19 · TypeScript 5                      |
-| Styling                   | Tailwind CSS v4 (PostCSS) · CSS custom properties                      |
-| Fonts                     | Bebas Neue (display) · Darker Grotesque (body) · JetBrains Mono (mono) |
-| Blockchain client         | genlayer-js v1.1.8                                                     |
-| Wallet integration        | wagmi v2 · viem · RainbowKit v2                                        |
-| Server state              | TanStack Query v5                                                      |
-| Notifications             | sonner (toast library)                                                 |
-| UI primitives             | Radix UI (Dialog, Select, Label, Tooltip) · lucide-react               |
-| Contract testing          | gltest direct mode · real genlayer-py-std SDK · 105 tests              |
-| Contract linting          | genvm-lint (AST safety checks)                                         |
-| Linting / types           | TypeScript strict · ESLint · Pyright                                   |
+| Layer | Technologies |
+| --- | --- |
+| **Smart contract** | Python · GenLayer Intelligent Contracts · GenVM (`gl.get_webpage`, `gl.exec_prompt`, `gl.eq_principle.strict_eq`) |
+| **Contract testing** | `gltest` direct runner · pytest (130 tests) |
+| **Frontend** | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 |
+| **Web3** | wagmi · viem · RainbowKit · genlayer-js |
+| **Data & UI** | @tanstack/react-query · Framer Motion · Recharts · Three.js · lucide-react · sonner |
+| **Network** | GenLayer Bradbury Testnet (Chain ID 4221) |
 
 ---
 
-## Deployed Contract
+## Roadmap
 
-### Bradbury Testnet
+See the in‑app [Roadmap](frontend/app/docs/page.tsx) for the full, living list. Highlights:
 
-| Field                | Value                                                                                                                                     |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Network**          | GenLayer Bradbury Testnet                                                                                                                 |
-| **Chain ID**         | 4221                                                                                                                                      |
-| **Contract Address** | [`0x26517582E3B1E89F55823ba217191321992D9592`](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592) |
-| **Explorer**         | [View on Bradbury Explorer ↗](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)                  |
-| **Contract Source**  | [`contracts/arbiq.py`](./contracts/arbiq.py)                                                                                              |
-| **Runtime**          | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`                                                                        |
-
-### Verify on Explorer
-
-You can inspect all contract transactions, state, and AI consensus results at:
-
-```
-https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592
-```
-
-Each `auto_evaluate` transaction shows the full validator consensus trace — every validator independently runs the LLM and their votes are recorded on-chain.
+- ✅ **Shipped** — escrow, AI evaluation, milestones, proposals & bidding, cancel/refund, deadline protection, dispute resolution, profiles, ratings, on‑chain chat, security hardening
+- 🚧 **In progress** — proposal/profile/rating UI polish, on‑chain job categories & skill search, contract‑level rate limiting, off‑chain notifications
+- 🔭 **Planned** — mainnet deployment, embeddable job widgets, encrypted messaging, multi‑currency escrow, cross‑chain posting
 
 ---
 
-## Links
+<div align="center">
 
-- GitHub: [github.com/CodeWithShamim/Arbiq](https://github.com/CodeWithShamim/Arbiq)
-- Twitter / X: [@CodeWithShamim](https://x.com/CodeWithShamim)
-- **Contract on Explorer:** [explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592](https://explorer-bradbury.genlayer.com/address/0x26517582E3B1E89F55823ba217191321992D9592)
-- GenLayer Docs: [docs.genlayer.com](https://docs.genlayer.com)
-- GenLayer Studio: [studio.genlayer.com](https://studio.genlayer.com)
+Built on [GenLayer](https://genlayer.com) — the Intelligent Blockchain.
+
+</div>
