@@ -11,6 +11,7 @@ import { DataFloats } from "@/components/animations/DataFloats";
 import { NetworkWidget } from "@/components/animations/NetworkWidget";
 import { ScrollProgress } from "@/components/animations/ScrollProgress";
 import { KonamiEaster } from "@/components/animations/KonamiEaster";
+import { VersionAlert } from "@/components/VersionAlert";
 
 export const metadata: Metadata = {
   title: "Arbiq — Trustless Freelance on GenLayer",
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <ErrorBoundary>
             <ErrorProvider>
+              <VersionAlert />
               <WrongNetworkBanner />
               {children}
             </ErrorProvider>

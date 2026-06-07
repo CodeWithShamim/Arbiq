@@ -72,7 +72,7 @@ export function WrongNetworkBanner() {
         left: 0,
         right: 0,
         zIndex: 100,
-        background: "linear-gradient(90deg, #7c3aed, #6366f1)",
+        background: "linear-gradient(90deg, #b91c1c, #ef4444)",
         color: "white",
         display: "flex",
         alignItems: "center",
