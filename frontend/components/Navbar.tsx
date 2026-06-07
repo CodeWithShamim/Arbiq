@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useTheme } from '@/lib/theme-context';
-import { PlusCircle, Sun, Moon, ChevronDown, LogOut } from 'lucide-react';
+import { PlusCircle, Sun, Moon, ChevronDown, LogOut, User } from 'lucide-react';
 import { NotificationCenter } from '@/components/NotificationCenter';
 
 const CA = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? '';
@@ -219,6 +219,20 @@ export function Navbar() {
                   </button>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Link
+                      href={`/profile/${account.address}`}
+                      title="My profile"
+                      className="hidden sm:flex items-center justify-center transition-all"
+                      style={{
+                        background: isLight ? 'rgba(124,58,237,0.07)' : 'rgba(124,58,237,0.12)',
+                        border: '1px solid rgba(124,58,237,0.24)',
+                        color: isLight ? '#6d28d9' : '#c4b5fd',
+                        borderRadius: 10,
+                        padding: '7px 9px',
+                      }}
+                    >
+                      <User className="w-3.5 h-3.5" />
+                    </Link>
                     <button
                       onClick={openAccountModal}
                       style={{

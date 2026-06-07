@@ -10,6 +10,7 @@ const STEPS = [
 
 const ORDER: Record<JobStatus, number> = {
   open: 0, active: 1, delivered: 2, completed: 3, disputed: 3,
+  cancelled: 3, refunded: 3,
 };
 
 export function StatusTimeline({ status }: { status: JobStatus }) {

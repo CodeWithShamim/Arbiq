@@ -25,6 +25,8 @@ const STATUS_CONFIG: { value: JobStatus | "all"; label: string; dot: string }[] 
   { value: "delivered", label: "Delivered", dot: "#fb923c" },
   { value: "completed", label: "Completed", dot: "#22c55e" },
   { value: "disputed",  label: "Disputed",  dot: "#ef4444" },
+  { value: "cancelled", label: "Cancelled", dot: "#94a3b8" },
+  { value: "refunded",  label: "Refunded",  dot: "#a78bfa" },
 ];
 
 const DEADLINE_OPTIONS: { value: DeadlineRange; label: string }[] = [

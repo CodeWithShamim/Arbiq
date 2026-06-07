@@ -8,13 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   useGetJob,
-  useTakeJob,
   useSubmitDelivery,
   useAutoEvaluate,
   useRelease,
   useResubmitDelivery,
+  useCancelJob,
+  useReclaimExpired,
+  useReclaimDisputed,
 } from '@/hooks/useArbiqContract';
 import { ReputationBadge } from '@/components/ReputationBadge';
+import { ProposalsPanel } from '@/components/ProposalsPanel';
+import { RateFreelancerPanel } from '@/components/RateFreelancerPanel';
 import { MilestoneStepper } from '@/components/MilestoneStepper';
 import type { Job } from '@/lib/types';
 import { useAccount } from 'wagmi';
@@ -210,22 +214,35 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [resubmitUrl, setResubmitUrl] = useState('');
   const [resubmitNote, setResubmitNote] = useState('');
 
-  const { takeJob, txState: takeState, isLoading: takingJob } = useTakeJob();
   const { submitDelivery, txState: deliverState, isLoading: submitting } = useSubmitDelivery();
   const { autoEvaluate, txState: evalState, isLoading: evaluating } = useAutoEvaluate();
   const { release, txState: releaseState, isLoading: releasing } = useRelease();
   const { resubmitDelivery, txState: resubmitState, isLoading: resubmitting } = useResubmitDelivery();
+  const { cancelJob, txState: cancelState, isLoading: cancelling } = useCancelJob();
+  const { reclaimExpired, txState: reclaimState, isLoading: reclaiming } = useReclaimExpired();
+  const { reclaimDisputed, txState: refundState, isLoading: refunding } = useReclaimDisputed();
 
   // Poll until the on-chain job status reflects the completed write.
   // We track which individual state *just* reached 'finalized' so that a
   // previously-finalized take_job doesn't shadow a later deliver/evaluate.
   useEffect(() => {
-    if (takeState.status === 'error' && takeState.error) toast.error(takeState.error);
-  }, [takeState.status, takeState.error]);
-
-  useEffect(() => {
     if (deliverState.status === 'error' && deliverState.error) toast.error(deliverState.error);
   }, [deliverState.status, deliverState.error]);
+
+  useEffect(() => {
+    if (cancelState.status === 'error' && cancelState.error) toast.error(cancelState.error);
+    if (cancelState.status === 'finalized') toast.success('Job cancelled — escrow refunded');
+  }, [cancelState.status, cancelState.error]);
+
+  useEffect(() => {
+    if (reclaimState.status === 'error' && reclaimState.error) toast.error(reclaimState.error);
+    if (reclaimState.status === 'finalized') toast.success('Escrow reclaimed — deadline missed');
+  }, [reclaimState.status, reclaimState.error]);
+
+  useEffect(() => {
+    if (refundState.status === 'error' && refundState.error) toast.error(refundState.error);
+    if (refundState.status === 'finalized') toast.success('Dispute resolved — escrow refunded');
+  }, [refundState.status, refundState.error]);
 
   useEffect(() => {
     if (evalState.status === 'error' && evalState.error) toast.error(evalState.error);
@@ -241,11 +258,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   // One polling effect per write — each watches only its own status so they
   // can't interfere with each other's expected-status check.
-  usePollUntil(takeState.status,     'active',                   refetch);
   usePollUntil(deliverState.status,  'delivered',                refetch);
   usePollUntil(resubmitState.status, 'delivered',                refetch);
   usePollUntil(evalState.status,     null /* completed|disputed */, refetch);
   usePollUntil(releaseState.status,  'completed',                refetch);
+  usePollUntil(cancelState.status,   'cancelled',                refetch);
+  usePollUntil(reclaimState.status,  'cancelled',                refetch);
+  usePollUntil(refundState.status,   'refunded',                 refetch);
 
   if (isLoading)
     return (
@@ -312,9 +331,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     resubmitDelivery(jobId, resubmitUrl, resubmitNote);
   };
 
-  // Compute days since posting
-  const daysAgoPosted = job.created_at
-    ? Math.max(0, Math.floor((Date.now() - new Date(job.created_at).getTime()) / 86_400_000))
+  // created_at from the contract is unix SECONDS (0 for legacy jobs).
+  const createdMs = job.created_at ? job.created_at * 1000 : 0;
+  const daysAgoPosted = createdMs
+    ? Math.max(0, Math.floor((Date.now() - createdMs) / 86_400_000))
     : null;
 
   return (
@@ -396,10 +416,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 />
                 <ReputationBadge address={job.freelancer} showDetails />
               </div>
-            ) : job.created_at ? (
+            ) : createdMs ? (
               <MetaItem
                 label="Posted"
-                value={new Date(job.created_at).toLocaleDateString('en-US', {
+                value={new Date(createdMs).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
@@ -421,81 +441,50 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
           {/* ── OPEN ── */}
           {job.status === 'open' && (
-            <Section title={isClient ? 'Awaiting Freelancer' : 'Accept This Job'} accent="#38bdf8">
-              {isClient ? (
-                <div className="space-y-4">
-                  {/* Pulsing waiting indicator */}
-                  <div className="flex items-center gap-2.5">
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span
-                        className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
-                        style={{ background: '#38bdf8' }}
-                      />
-                      <span
-                        className="relative inline-flex rounded-full h-2.5 w-2.5"
-                        style={{ background: '#38bdf8' }}
-                      />
-                    </span>
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                      Waiting for freelancer
-                    </p>
-                  </div>
-
-                  {daysAgoPosted !== null && (
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      Posted{' '}
-                      {daysAgoPosted === 0
-                        ? 'today'
-                        : daysAgoPosted === 1
-                        ? '1 day ago'
-                        : `${daysAgoPosted} days ago`}
-                    </p>
-                  )}
-
-                  {/* Share nudge */}
-                  <div
-                    className="flex items-center justify-between gap-3 p-3 rounded-xl"
-                    style={{
-                      background: 'rgba(56,189,248,0.06)',
-                      border: '1px solid rgba(56,189,248,0.15)',
-                    }}
-                  >
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      Share this job to find a freelancer faster →
-                    </p>
-                    <ShareButton compact />
-                  </div>
-                </div>
-              ) : isConnected ? (
-                <div className="space-y-3">
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    Accept this job and start working. You&apos;ll be the assigned freelancer.
+            <Section title={isClient ? 'Proposals' : 'Apply for This Job'} accent="#38bdf8">
+              {isClient && (
+                <div
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl mb-4"
+                  style={{
+                    background: 'rgba(56,189,248,0.06)',
+                    border: '1px solid rgba(56,189,248,0.15)',
+                  }}
+                >
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {daysAgoPosted !== null
+                      ? `Posted ${daysAgoPosted === 0 ? 'today' : daysAgoPosted === 1 ? '1 day ago' : `${daysAgoPosted} days ago`} · share to attract freelancers →`
+                      : 'Share this job to attract freelancers →'}
                   </p>
-                  <ActionButton
-                    onClick={() => takeJob(jobId)}
-                    loading={takingJob}
-                    label="Accept & Start Working"
-                    loadingLabel="Accepting…"
+                  <ShareButton compact />
+                </div>
+              )}
+
+              <ProposalsPanel
+                jobId={jobId}
+                isClient={!!isClient}
+                address={address}
+                isConnected={isConnected}
+                onConnect={() => openConnectModal?.()}
+                onMutated={refetch}
+              />
+
+              {/* Client can cancel an open job and reclaim escrow */}
+              {isClient && (
+                <div className="pt-4 mt-2" style={{ borderTop: '1px solid var(--border-divider)' }}>
+                  <DangerButton
+                    onClick={() => cancelJob(jobId)}
+                    loading={cancelling}
+                    label="Cancel Job & Refund Escrow"
+                    loadingLabel="Cancelling…"
+                    confirmText="Cancel this job? Your escrowed GEN will be refunded and any proposals discarded."
                   />
                   <TxHudOverlay
-                    status={takeState.status}
-                    consensusStatus={takeState.consensusStatus}
-                    txHash={takeState.txHash}
-                    error={takeState.error}
-                    operation="take_job"
+                    status={cancelState.status}
+                    consensusStatus={cancelState.consensusStatus}
+                    txHash={cancelState.txHash}
+                    error={cancelState.error}
+                    operation="cancel_job"
                   />
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    Connect your wallet to take this job
-                  </p>
-                  <button
-                    onClick={() => openConnectModal?.()}
-                    className="btn-primary px-4 py-2 rounded-lg text-sm text-white font-semibold"
-                  >
-                    Connect Wallet
-                  </button>
                 </div>
               )}
             </Section>
@@ -506,6 +495,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <Section title="Milestone Progress" accent="#a78bfa">
               <MilestoneStepper job={job} isClient={true} isFreelancer={false} />
             </Section>
+          )}
+
+          {/* ── ACTIVE + client: reclaim escrow if the freelancer missed the deadline ── */}
+          {job.status === 'active' && isClient && (
+            <DeadlineReclaim
+              job={job}
+              loading={reclaiming}
+              onReclaim={() => reclaimExpired(jobId)}
+              txState={reclaimState}
+            />
           )}
 
           {/* ── ACTIVE + freelancer ── */}
@@ -768,6 +767,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
           )}
 
+          {/* ── COMPLETED: client rates the freelancer ── */}
+          {job.status === 'completed' && (
+            <RateFreelancerPanel job={job} isClient={!!isClient} onRated={refetch} />
+          )}
+
           {/* ── DISPUTED ── */}
           {job.status === 'disputed' && (
             <div
@@ -850,6 +854,58 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               {isFreelancer && (job.resubmit_count ?? 0) >= 2 && (
                 <p className="text-xs pt-2" style={{ color: 'rgba(239,68,68,0.45)' }}>
                   Maximum resubmits reached. No further appeals allowed.
+                </p>
+              )}
+
+              {/* Client can reclaim escrow once the freelancer has exhausted resubmits */}
+              {isClient && (job.resubmit_count ?? 0) >= 2 && (
+                <div className="pt-3 space-y-2" style={{ borderTop: '1px solid rgba(239,68,68,0.12)' }}>
+                  <p className="text-xs" style={{ color: 'rgba(239,68,68,0.65)' }}>
+                    The freelancer has used all {job.resubmit_count} resubmits without approval. You can
+                    close the dispute and reclaim your escrowed funds.
+                  </p>
+                  <DangerButton
+                    onClick={() => reclaimDisputed(jobId)}
+                    loading={refunding}
+                    label="Reclaim Escrow"
+                    loadingLabel="Reclaiming…"
+                    confirmText="Close this dispute and refund the full escrow back to you? This cannot be undone."
+                  />
+                  <TxHudOverlay
+                    status={refundState.status}
+                    consensusStatus={refundState.consensusStatus}
+                    txHash={refundState.txHash}
+                    error={refundState.error}
+                    operation="reclaim_disputed"
+                  />
+                </div>
+              )}
+              {isClient && (job.resubmit_count ?? 0) < 2 && (
+                <p className="text-xs pt-2" style={{ color: 'rgba(239,68,68,0.5)' }}>
+                  The freelancer can still resubmit ({2 - (job.resubmit_count ?? 0)} attempt
+                  {2 - (job.resubmit_count ?? 0) !== 1 ? 's' : ''} left). You&apos;ll be able to reclaim the
+                  escrow if they exhaust their resubmits without approval.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── REFUNDED / CANCELLED terminal states ── */}
+          {(job.status === 'refunded' || job.status === 'cancelled') && (
+            <div
+              className="p-6 rounded-2xl space-y-2 anim-scale-in"
+              style={{
+                background: 'linear-gradient(135deg, rgba(148,163,184,0.08) 0%, rgba(148,163,184,0.03) 100%)',
+                border: '1px solid rgba(148,163,184,0.2)',
+              }}
+            >
+              <div className="flex items-center gap-2 font-bold" style={{ color: '#cbd5e1' }}>
+                <AlertCircle className="w-5 h-5" />
+                {job.status === 'refunded' ? 'Dispute Resolved — Escrow Refunded' : 'Job Cancelled — Escrow Refunded'}
+              </div>
+              {job.ai_reasoning && (
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  {job.ai_reasoning}
                 </p>
               )}
             </div>
@@ -1133,5 +1189,117 @@ function ActionButton({
         </>
       )}
     </button>
+  );
+}
+
+// A destructive button that asks for inline confirmation before firing.
+function DangerButton({
+  onClick,
+  loading,
+  label,
+  loadingLabel,
+  confirmText,
+}: {
+  onClick: () => void;
+  loading: boolean;
+  label: string;
+  loadingLabel: string;
+  confirmText: string;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming && !loading) {
+    return (
+      <div
+        className="p-3 rounded-xl space-y-3"
+        style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}
+      >
+        <p className="text-xs" style={{ color: '#fca5a5' }}>{confirmText}</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setConfirming(false); onClick(); }}
+            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+            style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}
+          >
+            Yes, confirm
+          </button>
+          <button
+            onClick={() => setConfirming(false)}
+            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+            style={{ background: 'var(--surface-raised)', border: '1px solid var(--border-mid)', color: 'var(--text-secondary)' }}
+          >
+            Keep job
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      disabled={loading}
+      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+      style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}
+    >
+      {loading ? (
+        <><Loader2 className="w-4 h-4 animate-spin" /> {loadingLabel}</>
+      ) : (
+        label
+      )}
+    </button>
+  );
+}
+
+// Active-job reclaim: only meaningful once the deadline has passed. Renders
+// nothing useful until then so the client isn't tempted to reclaim early.
+function DeadlineReclaim({
+  job,
+  loading,
+  onReclaim,
+  txState,
+}: {
+  job: Job;
+  loading: boolean;
+  onReclaim: () => void;
+  txState: {
+    status: 'idle' | 'pending' | 'finalizing' | 'finalized' | 'error';
+    consensusStatus: string | null;
+    txHash: unknown;
+    error: string | null;
+  };
+}) {
+  const deadlineTs = job.deadline_ts ? job.deadline_ts * 1000 : null;
+  const past = deadlineTs !== null && Date.now() > deadlineTs;
+  const enforceable = !!job.deadline_ts;
+
+  return (
+    <Section title="Deadline" accent={past ? '#ef4444' : '#64748b'}>
+      <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+        {!enforceable
+          ? 'This job has no machine-enforceable deadline, so escrow cannot be auto-reclaimed.'
+          : past
+          ? 'The deadline has passed and the freelancer has not delivered. You can reclaim your escrowed funds.'
+          : `If the freelancer doesn't deliver by ${formatDeadline(job.deadline)}, you'll be able to reclaim your escrow here.`}
+      </p>
+      {enforceable && past && (
+        <>
+          <DangerButton
+            onClick={onReclaim}
+            loading={loading}
+            label="Reclaim Escrow (Deadline Missed)"
+            loadingLabel="Reclaiming…"
+            confirmText="The freelancer missed the deadline without delivering. Reclaim your full escrow? This cancels the job."
+          />
+          <TxHudOverlay
+            status={txState.status}
+            consensusStatus={txState.consensusStatus}
+            txHash={txState.txHash as never}
+            error={txState.error}
+            operation="reclaim_expired"
+          />
+        </>
+      )}
+    </Section>
   );
 }

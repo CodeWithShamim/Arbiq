@@ -15,7 +15,7 @@ import {
   readContract,
   invalidateReadCache,
 } from "@/lib/genlayer/client";
-import type { Job, FreelancerProfile } from "@/lib/types";
+import type { Job, FreelancerProfile, Proposal } from "@/lib/types";
 import { useError } from "@/lib/error-context";
 import { friendlyError } from "@/lib/errors";
 
@@ -117,7 +117,7 @@ const IDLE: TxState = {
 };
 
 // Methods whose cached reads must be busted after any write
-const WRITE_INVALIDATES = ["get_all_jobs", "get_job", "get_job_count", "get_messages"];
+const WRITE_INVALIDATES = ["get_all_jobs", "get_job", "get_job_count", "get_messages", "get_proposals", "get_profile"];
 
 function useContractWrite() {
   const { address } = useAccount();
@@ -537,4 +537,184 @@ export function useApproveMilestone() {
     isConnected,
     isLoading: txState.status === "pending" || txState.status === "finalizing",
   };
+}
+
+// ─── Cancellation & refund hooks ───────────────────────────────────────────────
+
+export function useCancelJob() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const cancelJob = useCallback(
+    (jobId: number) => send({ functionName: "cancel_job", args: [jobId] }),
+    [send]
+  );
+
+  return {
+    cancelJob,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+export function useReclaimExpired() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const reclaimExpired = useCallback(
+    (jobId: number) => send({ functionName: "reclaim_expired", args: [jobId] }),
+    [send]
+  );
+
+  return {
+    reclaimExpired,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+export function useReclaimDisputed() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const reclaimDisputed = useCallback(
+    (jobId: number) => send({ functionName: "reclaim_disputed", args: [jobId] }),
+    [send]
+  );
+
+  return {
+    reclaimDisputed,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+// ─── Proposals / bidding hooks ─────────────────────────────────────────────────
+
+export function useGetProposals(jobId: number | undefined) {
+  return useQuery({
+    queryKey: ["arbiq", "proposals", jobId],
+    queryFn: async () => {
+      if (jobId === undefined) return [] as Proposal[];
+      const raw = await readContract("get_proposals", [jobId]);
+      try {
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+        return (Array.isArray(parsed) ? parsed : []) as Proposal[];
+      } catch {
+        return [] as Proposal[];
+      }
+    },
+    enabled: jobId !== undefined,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useApplyToJob() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const applyToJob = useCallback(
+    (jobId: number, note: string, bid: number = 0) =>
+      send({ functionName: "apply_to_job", args: [jobId, note, bid] }),
+    [send]
+  );
+
+  return {
+    applyToJob,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+export function useAcceptProposal() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const acceptProposal = useCallback(
+    (jobId: number, freelancer: string) =>
+      send({ functionName: "accept_proposal", args: [jobId, freelancer] }),
+    [send]
+  );
+
+  return {
+    acceptProposal,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+// ─── Ratings & profile hooks ───────────────────────────────────────────────────
+
+export function useRateFreelancer() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const rateFreelancer = useCallback(
+    (jobId: number, stars: number, review: string) =>
+      send({ functionName: "rate_freelancer", args: [jobId, stars, review] }),
+    [send]
+  );
+
+  return {
+    rateFreelancer,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+export function useSetProfile() {
+  const { send, txState, reset, isConnected } = useContractWrite();
+
+  const setProfile = useCallback(
+    (displayName: string, bio: string, skills: string[]) =>
+      send({ functionName: "set_profile", args: [displayName, bio, skills] }),
+    [send]
+  );
+
+  return {
+    setProfile,
+    txState,
+    reset,
+    isConnected,
+    isLoading: txState.status === "pending" || txState.status === "finalizing",
+  };
+}
+
+// ─── Paginated job read ────────────────────────────────────────────────────────
+
+export interface JobsPage {
+  total: number;
+  offset: number;
+  limit: number;
+  jobs: Job[];
+}
+
+export function useGetJobsPage(offset: number, limit: number) {
+  return useQuery({
+    queryKey: ["arbiq", "jobsPage", offset, limit],
+    queryFn: async (): Promise<JobsPage> => {
+      const raw = await readContract("get_jobs_page", [offset, limit]);
+      try {
+        const parsed = (typeof raw === "string" ? JSON.parse(raw) : raw) as Partial<JobsPage>;
+        return {
+          total: parsed.total ?? 0,
+          offset: parsed.offset ?? offset,
+          limit: parsed.limit ?? limit,
+          jobs: Array.isArray(parsed.jobs) ? (parsed.jobs as Job[]) : [],
+        };
+      } catch {
+        return { total: 0, offset, limit, jobs: [] };
+      }
+    },
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+    retry: 2,
+  });
 }

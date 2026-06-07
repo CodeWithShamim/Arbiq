@@ -94,7 +94,8 @@ function detectTransition(
 function checkStale(job: Job, userAddress: string): boolean {
   if (job.status !== "open") return false;
   if (job.client.toLowerCase() !== userAddress.toLowerCase()) return false;
-  const created = job.created_at ? new Date(job.created_at).getTime() : 0;
+  // created_at is unix SECONDS — convert to ms before comparing.
+  const created = job.created_at ? job.created_at * 1000 : 0;
   return created > 0 && Date.now() - created > 48 * 60 * 60 * 1000;
 }
 

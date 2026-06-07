@@ -126,6 +126,20 @@ def _approve_milestone(contract, vm, job_id: int, idx: int) -> None:
     contract.approve_milestone(job_id, idx)
 
 
+def _auto_evaluate(contract, vm, job_id: int) -> None:
+    """auto_evaluate is client-only — set the client sender before calling."""
+    vm.sender = _addr(_CLIENT_BYTES)
+    vm.value = 0
+    contract.auto_evaluate(job_id)
+
+
+def _resubmit(contract, vm, job_id: int,
+              url="https://github.com/foo/resubmit", note="Fixed!") -> None:
+    vm.sender = _addr(_FREELANCER_BYTES)
+    vm.value = 0
+    contract.resubmit_delivery(job_id, url, note)
+
+
 def _job(contract, job_id: int) -> dict:
     raw = contract.get_job(job_id)
     return json.loads(raw)
@@ -571,7 +585,7 @@ class TestAutoEvaluate:
         _mock_llm(direct_vm, _APPROVE_RESPONSE)
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm, budget=500)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "completed"
 
     def test_rejected_marks_job_disputed(self, direct_deploy, direct_vm):
@@ -579,7 +593,7 @@ class TestAutoEvaluate:
         _mock_llm(direct_vm, _REJECT_RESPONSE)
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "disputed"
 
     def test_ai_reasoning_saved_to_job(self, direct_deploy, direct_vm):
@@ -591,7 +605,7 @@ class TestAutoEvaluate:
         }))
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["ai_reasoning"] == "All criteria met."
 
     def test_ai_confidence_saved(self, direct_deploy, direct_vm):
@@ -599,7 +613,7 @@ class TestAutoEvaluate:
         _mock_llm(direct_vm, _APPROVE_RESPONSE)
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["ai_confidence"] == "high"
 
     def test_ai_scores_saved_as_json(self, direct_deploy, direct_vm):
@@ -607,7 +621,7 @@ class TestAutoEvaluate:
         _mock_llm(direct_vm, _APPROVE_RESPONSE)
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         scores = json.loads(_job(c, jid)["ai_scores"])
         assert set(scores.keys()) == {"relevance", "completeness", "quality", "meets_spec", "professional"}
 
@@ -621,7 +635,7 @@ class TestAutoEvaluate:
         }))
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "disputed"
 
     def test_scores_avg_exactly_6_approved(self, direct_deploy, direct_vm):
@@ -634,7 +648,7 @@ class TestAutoEvaluate:
         }))
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm, budget=200)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "completed"
 
     def test_cannot_evaluate_non_delivered_job(self, direct_deploy, direct_vm):
@@ -655,7 +669,7 @@ class TestAutoEvaluate:
         _mock_web(direct_vm, url=".*github.*", body="# Project\nAll done.")
         _mock_llm(direct_vm, _APPROVE_RESPONSE)
         jid = self._setup_delivered(c, direct_vm, url="https://github.com/foo/bar")
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "completed"
 
     def test_handles_missing_scores_field(self, direct_deploy, direct_vm):
@@ -667,7 +681,7 @@ class TestAutoEvaluate:
         }))
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm, budget=100)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         job = _job(c, jid)
         assert job["status"] == "completed"
         assert job["ai_scores"] == "{}"
@@ -678,14 +692,14 @@ class TestAutoEvaluate:
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm)
         with pytest.raises(Exception, match="missing"):
-            c.auto_evaluate(jid)
+            _auto_evaluate(c, direct_vm, jid)
 
     def test_profile_updated_on_approve(self, direct_deploy, direct_vm):
         c = direct_deploy(CONTRACT)
         _mock_llm(direct_vm, _APPROVE_RESPONSE)
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm, budget=400)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         profile = json.loads(c.get_profile(_freelancer_hex()))
         assert profile["jobs_completed"] == 1
         assert profile["total_earned"] == 400
@@ -696,7 +710,7 @@ class TestAutoEvaluate:
         _mock_llm(direct_vm, _REJECT_RESPONSE)
         _mock_web(direct_vm)
         jid = self._setup_delivered(c, direct_vm)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         profile = json.loads(c.get_profile(_freelancer_hex()))
         assert profile["jobs_disputed"] == 1
         assert profile["reputation_score"] == 0
@@ -766,7 +780,7 @@ class TestResubmitDelivery:
         _submit_delivery(c, vm, jid)
         vm.mock_llm(".*", _REJECT_RESPONSE)
         vm.mock_web(".*", {"method": "GET", "status": 200, "body": "page"})
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, vm, jid)
         vm.clear_mocks()
         return jid
 
@@ -820,7 +834,7 @@ class TestResubmitDelivery:
         def redispute():
             direct_vm.mock_llm(".*", _REJECT_RESPONSE)
             direct_vm.mock_web(".*", {"method": "GET", "status": 200, "body": "page"})
-            c.auto_evaluate(jid)
+            _auto_evaluate(c, direct_vm, jid)
             direct_vm.clear_mocks()
 
         # First resubmit
@@ -936,7 +950,7 @@ class TestGetProfile:
         jid = _post_job(c, direct_vm, budget=500)
         _take_job(c, direct_vm, jid)
         _submit_delivery(c, direct_vm, jid)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         profile = json.loads(c.get_profile(_freelancer_hex()))
         assert profile["jobs_completed"] == 1
         assert profile["total_earned"] == 500
@@ -949,7 +963,7 @@ class TestGetProfile:
         jid = _post_job(c, direct_vm)
         _take_job(c, direct_vm, jid)
         _submit_delivery(c, direct_vm, jid)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         profile = json.loads(c.get_profile(_freelancer_hex()))
         assert profile["jobs_disputed"] == 1
         assert profile["reputation_score"] == 0
@@ -962,7 +976,7 @@ class TestGetProfile:
         jid1 = _post_job(c, direct_vm, budget=100)
         _take_job(c, direct_vm, jid1)
         _submit_delivery(c, direct_vm, jid1)
-        c.auto_evaluate(jid1)
+        _auto_evaluate(c, direct_vm, jid1)
         direct_vm.clear_mocks()
         # Job 2 — dispute
         _mock_llm(direct_vm, _REJECT_RESPONSE)
@@ -970,7 +984,7 @@ class TestGetProfile:
         jid2 = _post_job(c, direct_vm, budget=100)
         _take_job(c, direct_vm, jid2)
         _submit_delivery(c, direct_vm, jid2)
-        c.auto_evaluate(jid2)
+        _auto_evaluate(c, direct_vm, jid2)
         profile = json.loads(c.get_profile(_freelancer_hex()))
         assert profile["reputation_score"] == 50  # 1 / 2
 
@@ -1054,7 +1068,7 @@ class TestFullLifecycle:
         assert _job(c, jid)["status"] == "active"
         _submit_delivery(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "delivered"
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "completed"
 
     def test_happy_path_manual_release(self, direct_deploy, direct_vm):
@@ -1073,7 +1087,7 @@ class TestFullLifecycle:
         jid = _post_job(c, direct_vm, budget=300)
         _take_job(c, direct_vm, jid)
         _submit_delivery(c, direct_vm, jid)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "disputed"
         direct_vm.clear_mocks()
 
@@ -1083,7 +1097,7 @@ class TestFullLifecycle:
 
         _mock_llm(direct_vm, _APPROVE_RESPONSE)
         _mock_web(direct_vm)
-        c.auto_evaluate(jid)
+        _auto_evaluate(c, direct_vm, jid)
         assert _job(c, jid)["status"] == "completed"
 
     def test_milestone_full_lifecycle(self, direct_deploy, direct_vm):
@@ -1104,7 +1118,7 @@ class TestFullLifecycle:
                           description="Design a professional logo for a tech startup company", budget=200)
         _take_job(c, direct_vm, jid1)
         _submit_delivery(c, direct_vm, jid1)
-        c.auto_evaluate(jid1)
+        _auto_evaluate(c, direct_vm, jid1)
         assert _job(c, jid1)["status"] == "completed"
         assert _job(c, jid2)["status"] == "open"
 
@@ -1123,3 +1137,273 @@ class TestFullLifecycle:
         msgs = json.loads(c.get_messages(jid))
         assert len(msgs) == 3
         assert msgs[2]["role"] == "client"
+
+
+# ── cancel_job / refunds ──────────────────────────────────────────────────────
+
+class TestCancelJob:
+    def test_client_can_cancel_open_job(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm, budget=500)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        c.cancel_job(jid)
+        job = _job(c, jid)
+        assert job["status"] == "cancelled"
+        assert job["escrow_remaining"] == 0
+
+    def test_non_client_cannot_cancel(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_OTHER_BYTES)
+        with pytest.raises(Exception, match="Only the client"):
+            c.cancel_job(jid)
+
+    def test_cannot_cancel_active_job(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        _take_job(c, direct_vm, jid)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="Only open jobs"):
+            c.cancel_job(jid)
+
+
+class TestReclaimExpired:
+    def test_client_reclaims_after_deadline(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        # Post with a deadline in the near future, then warp past it.
+        direct_vm.warp("2026-01-01T00:00:00Z")
+        jid = _post_job(c, direct_vm, deadline="2026-01-02", budget=400)
+        _take_job(c, direct_vm, jid)
+        direct_vm.warp("2026-01-03T00:00:00Z")  # past the deadline
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        c.reclaim_expired(jid)
+        job = _job(c, jid)
+        assert job["status"] == "cancelled"
+        assert job["escrow_remaining"] == 0
+
+    def test_cannot_reclaim_before_deadline(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        direct_vm.warp("2026-01-01T00:00:00Z")
+        jid = _post_job(c, direct_vm, deadline="2026-06-01")
+        _take_job(c, direct_vm, jid)
+        direct_vm.warp("2026-01-05T00:00:00Z")
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="Deadline has not passed"):
+            c.reclaim_expired(jid)
+
+    def test_cannot_reclaim_delivered_job(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        direct_vm.warp("2026-01-01T00:00:00Z")
+        jid = _post_job(c, direct_vm, deadline="2026-01-02")
+        _take_job(c, direct_vm, jid)
+        _submit_delivery(c, direct_vm, jid)
+        direct_vm.warp("2026-01-03T00:00:00Z")
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="Only active"):
+            c.reclaim_expired(jid)
+
+
+class TestReclaimDisputed:
+    def _exhaust_resubmits(self, c, vm):
+        vm.warp("2026-01-01T00:00:00Z")
+        jid = _post_job(c, vm, budget=300)
+        _take_job(c, vm, jid)
+        _submit_delivery(c, vm, jid)
+        vm.mock_llm(".*", _REJECT_RESPONSE)
+        vm.mock_web(".*", {"method": "GET", "status": 200, "body": "page"})
+        _auto_evaluate(c, vm, jid)            # dispute 1
+        _resubmit(c, vm, jid)                 # count 1
+        _auto_evaluate(c, vm, jid)            # dispute 2
+        _resubmit(c, vm, jid)                 # count 2
+        _auto_evaluate(c, vm, jid)            # dispute 3 (final)
+        vm.clear_mocks()
+        return jid
+
+    def test_client_reclaims_after_max_resubmits(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = self._exhaust_resubmits(c, direct_vm)
+        assert _job(c, jid)["resubmit_count"] == 2
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        c.reclaim_disputed(jid)
+        job = _job(c, jid)
+        assert job["status"] == "refunded"
+        assert job["escrow_remaining"] == 0
+
+    def test_cannot_reclaim_with_resubmits_left(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        direct_vm.warp("2026-01-01T00:00:00Z")
+        jid = _post_job(c, direct_vm, budget=300)
+        _take_job(c, direct_vm, jid)
+        _submit_delivery(c, direct_vm, jid)
+        direct_vm.mock_llm(".*", _REJECT_RESPONSE)
+        direct_vm.mock_web(".*", {"method": "GET", "status": 200, "body": "page"})
+        _auto_evaluate(c, direct_vm, jid)
+        direct_vm.clear_mocks()
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="resubmits remaining"):
+            c.reclaim_disputed(jid)
+
+
+# ── proposals / bidding ───────────────────────────────────────────────────────
+
+class TestProposals:
+    def test_freelancer_can_apply(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        c.apply_to_job(jid, "I can build this in 3 days", 0)
+        props = json.loads(c.get_proposals(jid))
+        assert len(props) == 1
+        assert props[0]["freelancer"].lower() == _freelancer_hex().lower()
+
+    def test_client_cannot_apply_to_own_job(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="own job"):
+            c.apply_to_job(jid, "mine", 0)
+
+    def test_cannot_apply_twice(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        c.apply_to_job(jid, "first", 0)
+        with pytest.raises(Exception, match="already applied"):
+            c.apply_to_job(jid, "second", 0)
+
+    def test_requires_note(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        with pytest.raises(Exception, match="note is required"):
+            c.apply_to_job(jid, "   ", 0)
+
+    def test_client_accepts_proposal(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        c.apply_to_job(jid, "pick me", 0)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        c.accept_proposal(jid, _freelancer_hex())
+        job = _job(c, jid)
+        assert job["status"] == "active"
+        assert job["freelancer"].lower() == _freelancer_hex().lower()
+
+    def test_cannot_accept_non_applicant(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="has not applied"):
+            c.accept_proposal(jid, _freelancer_hex())
+
+    def test_only_client_accepts(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        c.apply_to_job(jid, "pick me", 0)
+        direct_vm.sender = _addr(_OTHER_BYTES)
+        with pytest.raises(Exception, match="Only the client"):
+            c.accept_proposal(jid, _freelancer_hex())
+
+
+# ── ratings / profile ─────────────────────────────────────────────────────────
+
+class TestRatingsAndProfile:
+    def _completed_job(self, c, vm, budget=500):
+        vm.mock_llm(".*", _APPROVE_RESPONSE)
+        vm.mock_web(".*", {"method": "GET", "status": 200, "body": "page"})
+        jid = _post_job(c, vm, budget=budget)
+        _take_job(c, vm, jid)
+        _submit_delivery(c, vm, jid)
+        _auto_evaluate(c, vm, jid)
+        vm.clear_mocks()
+        return jid
+
+    def test_client_rates_freelancer(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = self._completed_job(c, direct_vm)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        c.rate_freelancer(jid, 5, "Excellent work!")
+        profile = json.loads(c.get_profile(_freelancer_hex()))
+        assert profile["rating_count"] == 1
+        assert profile["avg_rating"] == 5
+        assert _job(c, jid)["rated"] is True
+
+    def test_cannot_rate_twice(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = self._completed_job(c, direct_vm)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        c.rate_freelancer(jid, 4, "Good")
+        with pytest.raises(Exception, match="already been rated"):
+            c.rate_freelancer(jid, 5, "Again")
+
+    def test_rating_out_of_range_rejected(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = self._completed_job(c, direct_vm)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="between 1 and 5"):
+            c.rate_freelancer(jid, 6, "Too high")
+
+    def test_only_client_rates(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = self._completed_job(c, direct_vm)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        with pytest.raises(Exception, match="Only the client"):
+            c.rate_freelancer(jid, 5, "self praise")
+
+    def test_cannot_rate_incomplete_job(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        jid = _post_job(c, direct_vm)
+        _take_job(c, direct_vm, jid)
+        direct_vm.sender = _addr(_CLIENT_BYTES)
+        with pytest.raises(Exception, match="completed job"):
+            c.rate_freelancer(jid, 5, "early")
+
+    def test_set_profile_stores_fields(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        c.set_profile("Ada Lovelace", "Full-stack dev", ["python", "react", "solidity"])
+        profile = json.loads(c.get_profile(_freelancer_hex()))
+        assert profile["display_name"] == "Ada Lovelace"
+        assert profile["bio"] == "Full-stack dev"
+        assert profile["skills"] == ["python", "react", "solidity"]
+
+    def test_set_profile_cannot_forge_reputation(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        direct_vm.sender = _addr(_FREELANCER_BYTES)
+        c.set_profile("Hacker", "bio", ["x"])
+        profile = json.loads(c.get_profile(_freelancer_hex()))
+        # Reputation/earnings untouched by set_profile
+        assert profile["reputation_score"] == 100
+        assert profile["total_earned"] == 0
+        assert profile["jobs_completed"] == 0
+
+
+# ── pagination ────────────────────────────────────────────────────────────────
+
+class TestPagination:
+    def test_returns_newest_first(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        for i in range(3):
+            _post_job(c, direct_vm, title=f"Job number {i}",
+                      description="A sufficiently long description for this job posting")
+        page = json.loads(c.get_jobs_page(0, 2))
+        assert page["total"] == 3
+        assert len(page["jobs"]) == 2
+        assert page["jobs"][0]["id"] == 2  # newest first
+        assert page["jobs"][1]["id"] == 1
+
+    def test_offset_paginates(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        for i in range(3):
+            _post_job(c, direct_vm, title=f"Job number {i}",
+                      description="A sufficiently long description for this job posting")
+        page = json.loads(c.get_jobs_page(2, 2))
+        assert len(page["jobs"]) == 1
+        assert page["jobs"][0]["id"] == 0
+
+    def test_limit_clamped(self, direct_deploy, direct_vm):
+        c = direct_deploy(CONTRACT)
+        _post_job(c, direct_vm)
+        page = json.loads(c.get_jobs_page(0, 9999))
+        assert page["limit"] == 50

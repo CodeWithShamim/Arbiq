@@ -3,7 +3,9 @@ export type JobStatus =
   | "active"
   | "delivered"
   | "completed"
-  | "disputed";
+  | "disputed"
+  | "cancelled"   // client cancelled an open job, or reclaimed an expired one
+  | "refunded";   // dispute unresolved after max resubmits → escrow returned
 
 export interface Milestone {
   title: string;
@@ -19,7 +21,12 @@ export interface Job {
   title: string;
   description: string;
   budget: number;
+  // Remaining escrow held by the contract for this job (decremented as the
+  // freelancer is paid; 0 after full payout or refund).
+  escrow_remaining?: number;
   deadline: string;
+  // Parsed deadline as unix seconds (0 when unparseable / non-enforcing).
+  deadline_ts?: number;
   client: string;
   freelancer: string;
   status: JobStatus;
@@ -40,15 +47,32 @@ export interface Job {
   // Milestone payment support
   has_milestones?: boolean;
   milestones?: Milestone[];
-  // Unix seconds from gl.message.timestamp
+  // Client → freelancer rating on completion (one per job)
+  rated?: boolean;
+  rating?: number;          // 1–5 stars
+  review?: string;
+  // Unix seconds from on-chain block time
   created_at?: number;
   updated_at?: number;
 }
 
+export interface Proposal {
+  freelancer: string;
+  note: string;
+  bid: number;              // informational; 0 = at budget
+  created_at: number;
+}
+
 export interface FreelancerProfile {
   address: string;
+  display_name: string;
+  bio: string;
+  skills: string[];
   jobs_completed: number;
   jobs_disputed: number;
   total_earned: number;     // wei (same unit as job.budget)
   reputation_score: number; // 0–100 integer
+  rating_sum: number;
+  rating_count: number;
+  avg_rating: number;       // 0–5, rounded to 2 dp
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
+import { lookup } from "node:dns/promises";
+import net from "node:net";
 
 export interface PreviewResult {
   reachable: boolean;
@@ -24,6 +26,83 @@ export interface PreviewResult {
 
 const TIMEOUT_MS = 8_000;
 const UA = "Mozilla/5.0 (compatible; Arbiq-Preview/1.0; +https://arbiq.xyz)";
+
+// ── SSRF guard ────────────────────────────────────────────────────────────────
+// This route fetches an arbitrary user-supplied URL server-side. Without these
+// checks an attacker could reach internal services (cloud metadata at
+// 169.254.169.254, localhost admin panels, private LAN hosts). We block
+// non-public IPs, resolve DNS and re-check the resolved IP (defeats DNS
+// rebinding), and only allow the standard web ports.
+
+const ALLOWED_PORTS = new Set(["", "80", "443", "8080", "8443"]);
+
+function ipToBigInt(ip: string): bigint | null {
+  if (net.isIPv4(ip)) {
+    return ip.split(".").reduce((acc, oct) => (acc << 8n) + BigInt(Number(oct)), 0n);
+  }
+  return null;
+}
+
+/** True if the IP is loopback / private / link-local / reserved (not publicly routable). */
+function isPrivateIp(ip: string): boolean {
+  const v = ip.toLowerCase();
+
+  // IPv6 loopback / unspecified / unique-local (fc00::/7) / link-local (fe80::/10)
+  if (net.isIPv6(v)) {
+    if (v === "::1" || v === "::") return true;
+    if (v.startsWith("fc") || v.startsWith("fd")) return true; // unique local
+    if (v.startsWith("fe8") || v.startsWith("fe9") || v.startsWith("fea") || v.startsWith("feb")) return true; // link-local
+    // IPv4-mapped IPv6 (::ffff:a.b.c.d) — extract and re-check the v4 part
+    const mapped = v.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    if (mapped) return isPrivateIp(mapped[1]);
+    return false;
+  }
+
+  const n = ipToBigInt(v);
+  if (n === null) return true; // unparseable → treat as unsafe
+
+  const inRange = (cidr: string, bits: number): boolean => {
+    const base = ipToBigInt(cidr)!;
+    const mask = (0xffffffffn >> BigInt(32 - bits)) << BigInt(32 - bits);
+    return (n & mask) === (base & mask);
+  };
+
+  return (
+    inRange("0.0.0.0", 8) ||        // "this" network
+    inRange("10.0.0.0", 8) ||       // private
+    inRange("100.64.0.0", 10) ||    // CGNAT
+    inRange("127.0.0.0", 8) ||      // loopback
+    inRange("169.254.0.0", 16) ||   // link-local (incl. 169.254.169.254 metadata)
+    inRange("172.16.0.0", 12) ||    // private
+    inRange("192.0.0.0", 24) ||     // IETF protocol assignments
+    inRange("192.168.0.0", 16) ||   // private
+    inRange("198.18.0.0", 15) ||    // benchmarking
+    inRange("224.0.0.0", 4) ||      // multicast
+    inRange("240.0.0.0", 4)         // reserved
+  );
+}
+
+/** Validate that a URL is safe to fetch server-side. Throws on rejection. */
+async function assertSafeUrl(parsed: URL): Promise<void> {
+  if (!ALLOWED_PORTS.has(parsed.port)) {
+    throw new Error("Port not allowed");
+  }
+  const host = parsed.hostname;
+
+  // If the host is already a literal IP, check it directly.
+  if (net.isIP(host)) {
+    if (isPrivateIp(host)) throw new Error("Blocked address");
+    return;
+  }
+
+  // Otherwise resolve DNS and verify *every* resolved address is public.
+  // Re-checking the resolved IP (not just the hostname) defeats DNS rebinding.
+  const records = await lookup(host, { all: true });
+  if (records.length === 0) throw new Error("Host did not resolve");
+  for (const { address } of records) {
+    if (isPrivateIp(address)) throw new Error("Blocked address");
+  }
+}
 
 // ── HTML helpers ──────────────────────────────────────────────────────────────
 
@@ -71,9 +150,11 @@ function extractText(html: string): string {
 async function fetchGitHub(owner: string, repo: string): Promise<PreviewResult["github"]> {
   const headers: HeadersInit = { "User-Agent": UA, "Accept": "application/vnd.github+json" };
 
+  const o = encodeURIComponent(owner);
+  const r = encodeURIComponent(repo);
   const [repoRes, readmeRes] = await Promise.allSettled([
-    fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
-    fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers }),
+    fetch(`https://api.github.com/repos/${o}/${r}`, { headers }),
+    fetch(`https://api.github.com/repos/${o}/${r}/readme`, { headers }),
   ]);
 
   let repoDescription = "";
@@ -116,6 +197,13 @@ async function fetchPreview(url: string): Promise<PreviewResult> {
     parsed = new URL(url);
   } catch {
     return { reachable: false, ambiguous: false, title: "", description: "", favicon: "", contentPreview: "", contentLength: 0, isGitHub: false, error: "Invalid URL" };
+  }
+
+  // SSRF guard: reject internal/private targets before any server-side fetch.
+  try {
+    await assertSafeUrl(parsed);
+  } catch {
+    return { reachable: false, ambiguous: false, title: "", description: "", favicon: "", contentPreview: "", contentLength: 0, isGitHub: false, error: "URL not allowed" };
   }
 
   const isGitHub = parsed.hostname === "github.com";

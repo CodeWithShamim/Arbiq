@@ -27,6 +27,16 @@ const statusConfig: Record<JobStatus, { label: string; dot: string; style: React
     dot: "#ef4444",
     style: { background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" },
   },
+  cancelled: {
+    label: "Cancelled",
+    dot: "#94a3b8",
+    style: { background: "rgba(148,163,184,0.10)", border: "1px solid rgba(148,163,184,0.25)", color: "#cbd5e1" },
+  },
+  refunded: {
+    label: "Refunded",
+    dot: "#a78bfa",
+    style: { background: "rgba(167,139,250,0.10)", border: "1px solid rgba(167,139,250,0.25)", color: "#c4b5fd" },
+  },
 };
 
 export function StatusBadge({ status }: { status: JobStatus }) {
