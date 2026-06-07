@@ -1402,6 +1402,20 @@ Explorer:      https://explorer-bradbury.genlayer.com
                 ],
               },
               {
+                phase: "Security Hardening — In Progress",
+                status: "active",
+                color: "#ef4444",
+                items: [
+                  { text: "Critical: Restrict auto_evaluate() to client-only & harden against evidence-URL prompt injection (validators read attacker-controlled page content, can be steered to force payment)", badge: "Critical" },
+                  { text: "Critical: Verify per-job escrow isolation so an approved job cannot draw from funds escrowed for other open jobs (no shared-pool drain)", badge: "Critical" },
+                  { text: "High: SSRF guard on /api/preview-url — block private/loopback/link-local IPs, re-check DNS-resolved IP, deny non-standard ports", badge: "High" },
+                  { text: "High: Sanitize page & limit in /api/explorer-txs as bounded integers to stop upstream query-param injection", badge: "High" },
+                  { text: "Medium: Enforce deadline on-chain + client refund path for expired/un-taken jobs (escrow currently can lock forever)", badge: "Medium" },
+                  { text: "Medium: Harden reputation accounting against self-approval / self-posted-job inflation", badge: "Medium" },
+                  { text: "Medium: Replace unbounded view loops (get_all_jobs / by_client / by_freelancer) with on-chain pagination to avoid gas/time limits at scale", badge: "Medium" },
+                ],
+              },
+              {
                 phase: "v0.3 — Planned",
                 status: "planned",
                 color: "#38bdf8",
