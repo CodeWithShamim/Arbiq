@@ -14,7 +14,7 @@ export const CONTRACT_ADDRESS = (
 
 // ── Result cache ─────────────────────────────────────────────────────────────
 const readCache = new Map<string, { result: unknown; ts: number }>();
-const READ_CACHE_TTL = 8_000; // ms — longer TTL reduces RPC calls
+const READ_CACHE_TTL = 15_000; // ms — longer TTL reduces gen_call pressure
 
 // ── In-flight dedup ───────────────────────────────────────────────────────────
 // Multiple components calling readContract with the same key at the same moment
@@ -45,31 +45,42 @@ function releaseSlot() {
 }
 
 // ── Exponential backoff retry ─────────────────────────────────────────────────
+// One concurrency slot is acquired and released exactly once per attempt. The
+// backoff happens OUTSIDE the slot so a rate-limited call doesn't hold a slot
+// while it waits — that would starve the limiter and make the storm worse.
+async function fetchOnce(method: string, args: CalldataEncodable[]): Promise<unknown> {
+  await acquireSlot();
+  try {
+    return await genLayerClient.readContract({
+      address: CONTRACT_ADDRESS,
+      functionName: method,
+      args,
+    });
+  } finally {
+    releaseSlot();
+  }
+}
+
+function isRateLimit(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /rate limit|429|too many requests/i.test(msg);
+}
+
 async function fetchWithRetry(
   method: string,
   args: CalldataEncodable[],
   attempt = 0,
 ): Promise<unknown> {
-  await acquireSlot();
   try {
-    const result = await genLayerClient.readContract({
-      address: CONTRACT_ADDRESS,
-      functionName: method,
-      args,
-    });
-    return result;
+    return await fetchOnce(method, args);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("rate limit") && attempt < 4) {
-      const delay = 600 * Math.pow(2, attempt); // 600 ms, 1.2 s, 2.4 s, 4.8 s
+    if (isRateLimit(err) && attempt < 5) {
+      // 800ms, 1.6s, 3.2s, 6.4s, 12.8s + up to 400ms jitter to de-sync clients.
+      const delay = 800 * Math.pow(2, attempt) + Math.random() * 400;
       await new Promise((r) => setTimeout(r, delay));
-      releaseSlot();
       return fetchWithRetry(method, args, attempt + 1);
     }
     throw err;
-  } finally {
-    // Only release on success or non-retryable error (retry path releases above)
-    if (active > 0 || queue.length === 0) releaseSlot();
   }
 }
 

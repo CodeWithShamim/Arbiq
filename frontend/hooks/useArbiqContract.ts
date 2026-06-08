@@ -66,8 +66,8 @@ export function useGetAllJobs() {
       const raw = await readContract("get_all_jobs");
       return parseJobsJson(raw);
     },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 45_000,
+    refetchInterval: 60_000,
     retry: 2,
   });
 }
@@ -81,8 +81,8 @@ export function useGetJob(id: number | undefined) {
       return parseJobJson(raw);
     },
     enabled: id !== undefined,
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 45_000,
+    refetchInterval: 60_000,
   });
 }
 
@@ -102,7 +102,8 @@ export function useGetJobCount() {
   return useQuery({
     queryKey: ["arbiq", "jobCount"],
     queryFn: () => readContract("get_job_count"),
-    refetchInterval: 30_000,
+    staleTime: 45_000,
+    refetchInterval: 60_000,
   });
 }
 
@@ -414,8 +415,8 @@ export function useGetMessages(jobId: number | undefined) {
       }
     },
     enabled: jobId !== undefined,
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 45_000,
+    refetchInterval: 60_000,
   });
 }
 
@@ -452,8 +453,8 @@ export function useGetProfile(address: string | undefined) {
       }
     },
     enabled: !!address,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -621,8 +622,8 @@ export function useGetProposals(jobId: number | undefined) {
       }
     },
     enabled: jobId !== undefined,
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 45_000,
+    refetchInterval: 60_000,
   });
 }
 
@@ -726,8 +727,8 @@ export function useGetJobsPage(offset: number, limit: number) {
         return { total: 0, offset, limit, jobs: [] };
       }
     },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 45_000,
+    refetchInterval: 60_000,
     retry: 2,
   });
 }

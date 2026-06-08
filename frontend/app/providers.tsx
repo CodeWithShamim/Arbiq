@@ -138,7 +138,16 @@ export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
-        defaultOptions: { queries: { staleTime: 10_000, retry: 2 } },
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            retry: 2,
+            // Bradbury rate-limits gen_call — don't refire reads on every tab
+            // focus / reconnect, which caused bursts of simultaneous gen_calls.
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+          },
+        },
       })
   );
 
