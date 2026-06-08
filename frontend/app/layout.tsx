@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "@rainbow-me/rainbowkit/styles.css";
 import { Providers, WrongNetworkBanner } from "./providers";
@@ -17,6 +17,14 @@ export const metadata: Metadata = {
   title: "Arbiq — Trustless Freelance on GenLayer",
   description:
     "The first freelance marketplace where payment is enforced by AI consensus, not promises. Post work, get paid in GEN — no middlemen, no disputes left unresolved.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.svg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#7c3aed",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

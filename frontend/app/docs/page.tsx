@@ -611,7 +611,7 @@ GenLayer Bradbury Testnet  (Chain ID 4221)
               </span>
             </div>
             {[
-              { v: "v2", addr: "0x83C58d17D0179CbDfDEE9F2F103C312f9193D18a", note: "Current — proposals, cancel & refunds, deadlines, disputes, profiles, ratings, security hardening", date: "Active since Jun 7, 2026", active: true },
+              { v: "v2", addr: "0x02f970fe64dbda96cc97417B3947606234b81500", note: "Current — proposals, cancel & refunds, deadlines, disputes, profiles, ratings, security hardening", date: "Active since Jun 7, 2026", active: true },
               { v: "v1", addr: "0x26517582E3B1E89F55823ba217191321992D9592", note: "Superseded — escrow, AI evaluation, milestones, chat", date: "", active: false },
             ].map(({ v, addr, note, date, active }) => (
               <div key={addr} className="flex items-start gap-3 py-1.5 text-sm">
