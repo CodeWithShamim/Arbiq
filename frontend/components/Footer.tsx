@@ -140,22 +140,30 @@ export function Footer() {
         >
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             <span>© 2026 Arbiq. Open source.</span>
-            <Link
-              href="/privacy"
+            {[
+              { label: "Terms", href: "/terms" },
+              { label: "Privacy Policy", href: "/privacy" },
+              { label: "Cookie Policy", href: "/cookies" },
+            ].map(({ label, href }) => (
+              <Link
+                key={href}
+                href={href}
+                className="transition-colors duration-150"
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-label)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
+              >
+                {label}
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={() => { (window as Window & { arbiqOpenCookieSettings?: () => void }).arbiqOpenCookieSettings?.(); }}
               className="transition-colors duration-150"
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-label)"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
             >
-              Privacy Policy
-            </Link>
-            <Link
-              href="/cookies"
-              className="transition-colors duration-150"
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-label)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
-            >
-              Cookie Policy
-            </Link>
+              Cookie Settings
+            </button>
           </div>
           <span className="flex items-center gap-1.5" style={{ opacity: 0.7 }}>
             Running on

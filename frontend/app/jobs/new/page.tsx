@@ -62,7 +62,7 @@ Requirements:
     }
     const budget = parseFloat(form.budget);
     if (isNaN(budget) || budget <= 0) { toast.error("Budget must be positive"); return; }
-    if (!agreed) { toast.error("Please agree to the Privacy Policy & Cookie Policy"); return; }
+    if (!agreed) { toast.error("Please agree to the Terms, Privacy & Cookie policies"); return; }
 
     if (paymentMode === "milestones") {
       const titles = milestoneTitles.map((t) => t.trim()).filter(Boolean);
@@ -339,6 +339,10 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
               </button>
               <span className="text-[13px] leading-relaxed font-medium" style={{ color: "var(--text-muted)" }}>
                 I agree to Arbiq&apos;s{" "}
+                <Link href="/terms" target="_blank" className="font-semibold underline" style={{ color: "#a78bfa" }}>
+                  Terms of Service
+                </Link>
+                ,{" "}
                 <Link href="/privacy" target="_blank" className="font-semibold underline" style={{ color: "#a78bfa" }}>
                   Privacy Policy
                 </Link>{" "}

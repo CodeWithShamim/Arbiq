@@ -32,6 +32,14 @@ export function CookieConsent() {
 
   useEffect(() => {
     if (getCookieConsent() === null) setShow(true);
+
+    // Let the footer's "Cookie Settings" link re-open the banner so visitors
+    // can change a previously-saved choice without clearing browser storage.
+    const open = () => setShow(true);
+    (window as Window & { arbiqOpenCookieSettings?: () => void }).arbiqOpenCookieSettings = open;
+    return () => {
+      delete (window as Window & { arbiqOpenCookieSettings?: () => void }).arbiqOpenCookieSettings;
+    };
   }, []);
 
   const respond = (choice: CookieConsent) => {

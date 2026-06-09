@@ -3,11 +3,11 @@
 import type { ReactNode } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Shield, Cookie } from "lucide-react";
+import { Shield, Cookie, Scale } from "lucide-react";
 
 // Icons are resolved here, inside the client component, because function
 // components can't be passed as props from a server component.
-const ICONS = { shield: Shield, cookie: Cookie } as const;
+const ICONS = { shield: Shield, cookie: Cookie, scale: Scale } as const;
 
 export interface LegalSection {
   heading: string;

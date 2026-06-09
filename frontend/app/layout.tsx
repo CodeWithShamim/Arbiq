@@ -14,14 +14,41 @@ import { KonamiEaster } from "@/components/animations/KonamiEaster";
 import { VersionAlert } from "@/components/VersionAlert";
 import { CookieConsent } from "@/components/CookieConsent";
 
+import { SITE } from "@/lib/site";
+
 export const metadata: Metadata = {
-  title: "Arbiq — Trustless Freelance on GenLayer",
-  description:
-    "The first freelance marketplace where payment is enforced by AI consensus, not promises. Post work, get paid in GEN — no middlemen, no disputes left unresolved.",
+  metadataBase: new URL(SITE.url),
+  title: {
+    default: `${SITE.name} — ${SITE.tagline}`,
+    template: `%s — ${SITE.name}`,
+  },
+  description: SITE.description,
+  applicationName: SITE.name,
+  keywords: [
+    "freelance", "escrow", "GenLayer", "blockchain", "AI arbitration",
+    "smart contract", "Web3", "crypto payments", "GEN", "trustless",
+  ],
+  authors: [{ name: SITE.name }],
   icons: {
     icon: "/icon.svg",
     apple: "/apple-icon.svg",
   },
+  openGraph: {
+    type: "website",
+    siteName: SITE.name,
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
+    url: SITE.url,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: SITE.name }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
+    creator: SITE.twitter,
+    images: ["/opengraph-image"],
+  },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
