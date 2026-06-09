@@ -9,8 +9,9 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Lock, Info, Plus, X, Layers } from "lucide-react";
+import { Loader2, AlertCircle, Lock, Info, Plus, X, Layers, Check } from "lucide-react";
 import { TxHudOverlay } from "@/components/TxHudOverlay";
+import Link from "next/link";
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -37,6 +38,7 @@ Requirements:
 
   const [paymentMode, setPaymentMode] = useState<"single" | "milestones">("single");
   const [milestoneTitles, setMilestoneTitles] = useState(["", ""]);
+  const [agreed, setAgreed] = useState(false);
 
   const { postJob, txState, isLoading } = usePostJob();
   const { postJobMilestones, txState: milestoneState, isLoading: milestoneLoading } = usePostJobMilestones();
@@ -60,6 +62,7 @@ Requirements:
     }
     const budget = parseFloat(form.budget);
     if (isNaN(budget) || budget <= 0) { toast.error("Budget must be positive"); return; }
+    if (!agreed) { toast.error("Please agree to the Privacy Policy & Cookie Policy"); return; }
 
     if (paymentMode === "milestones") {
       const titles = milestoneTitles.map((t) => t.trim()).filter(Boolean);
@@ -318,10 +321,39 @@ Example: 'Deliver a fully responsive 5-page website (Home, About, Services, Port
               operation={activeOp}
             />
 
+            {/* Policy agreement */}
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={agreed}
+                onClick={() => setAgreed((v) => !v)}
+                className="mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all"
+                style={
+                  agreed
+                    ? { background: "#7c3aed", border: "1px solid #7c3aed" }
+                    : { background: "var(--surface-card)", border: "1px solid var(--border-subtle)" }
+                }
+              >
+                {agreed && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+              </button>
+              <span className="text-[13px] leading-relaxed font-medium" style={{ color: "var(--text-muted)" }}>
+                I agree to Arbiq&apos;s{" "}
+                <Link href="/privacy" target="_blank" className="font-semibold underline" style={{ color: "#a78bfa" }}>
+                  Privacy Policy
+                </Link>{" "}
+                and{" "}
+                <Link href="/cookies" target="_blank" className="font-semibold underline" style={{ color: "#a78bfa" }}>
+                  Cookie Policy
+                </Link>
+                , and understand that job details are written publicly on-chain.
+              </span>
+            </label>
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={!isConnected || anyLoading}
+              disabled={!isConnected || anyLoading || !agreed}
               className="btn-primary w-full flex items-center justify-center gap-2 py-4 rounded-xl text-white font-bold text-base"
             >
               {anyLoading ? (

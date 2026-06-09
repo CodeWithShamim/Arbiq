@@ -138,7 +138,25 @@ export function Footer() {
           className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 text-xs font-medium"
           style={{ borderTop: "1px solid var(--border-divider)", color: "var(--text-muted)" }}
         >
-          <span>© 2026 Arbiq. Open source.</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <span>© 2026 Arbiq. Open source.</span>
+            <Link
+              href="/privacy"
+              className="transition-colors duration-150"
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-label)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/cookies"
+              className="transition-colors duration-150"
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-label)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
+            >
+              Cookie Policy
+            </Link>
+          </div>
           <span className="flex items-center gap-1.5" style={{ opacity: 0.7 }}>
             Running on
             <a
